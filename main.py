@@ -49,5 +49,6 @@ if __name__ == "__main__":
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     try:
         main()
+        print("Poprawka")
     except Exception as e:
         print("An exception has occurred: ", e)
