@@ -20,7 +20,7 @@ def main():
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
-    logger = logging.getLogger('HORUS_FAS_logger')
+    logger = logging.getLogger('HORUS_CSS_logger')
     logger.info(f"Log file location: {log_file}")
     logger.info("Uruchamianie aplikacji")
 

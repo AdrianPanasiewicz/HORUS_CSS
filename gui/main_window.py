@@ -1,8 +1,8 @@
 import logging
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
-                             QWidget,
+                             QWidget, QVBoxLayout, QHBoxLayout,
                              QHBoxLayout, QLabel,
-                             QPushButton,
+                             QPushButton, QGridLayout,
                              QGridLayout, QVBoxLayout)
 from PyQt6.QtCore import Qt
 from core.serial_reader import SerialReader
@@ -12,9 +12,34 @@ from core.csv_handler import CsvHandler
 class MainWindow(QMainWindow):
     def __init__(self, config):
         super().__init__()
+        self.connect_gui_to_backend(config)
+        self.declare_variables()
+        self.initalizeUI()
+        self.serial.start_reading()
+
+    def connect_gui_to_backend(self, config):
         self.logger = logging.getLogger('HORUS_CSS.main_window')
         self.logger.info("Inicjalizacja głównego okna")
 
+        self.csv_handler = CsvHandler()
+        self.logger.info(
+            f"CSV handler zainicjalizowany w sesji: {self.csv_handler.session_dir}")
+
+        self.serial = SerialReader(config['port'], config['baudrate'])
+        self.logger.info(f"SerialReader zainicjalizowany na porcie {config['port']} z baudrate {config['baudrate']}")
+        self.processor = ProcessData()
+        self.logger.info(
+            f"Singleton ProcessData zainicjalizowany")
+
+        if config['lora_config']:
+            self.serial.LoraSet(config['lora_config'], config['is_config_selected'])
+            self.logger.info(f"Konfiguracja LoRa ustawiona: {config['lora_config']}")
+
+        self.serial.telemetry_received.connect(self.processor.handle_telemetry)
+        self.serial.transmission_info_received.connect(self.processor.handle_transmission_info)
+        self.processor.processed_data_ready.connect(self.handle_processed_data)
+
+    def declare_variables(self):
         self.now_str = ""
         self.console_update_counter = 0
         self.start_detection = False
@@ -37,150 +62,29 @@ class MainWindow(QMainWindow):
             'snr': 0
         }
 
-        # Inicjalizacja mapy
-        self.current_lat = self.current_data['latitude']
-        self.current_lng = self.current_data['longitude']
-        self.map = None
-        self.map_view = None
-
-        self.csv_handler = CsvHandler()
-        self.logger.info(
-            f"CSV handler zainicjalizowany w sesji: {self.csv_handler.session_dir}")
-
         self.signal_quality = "None"
 
+    def initalizeUI(self):
         self.setWindowTitle("HORUS-CSS")
         self.setStyleSheet("""
             background-color: black; 
             color: white;
         """)
-        # self.setMinimumSize(1200, 800)
+        self.declare_layout()
+        self.declare_widgets()
 
-        self.serial = SerialReader(config['port'], config['baudrate'])
-        self.logger.info(f"SerialReader zainicjalizowany na porcie {config['port']} z baudrate {config['baudrate']}")
-        self.processor = ProcessData()
-        self.logger.info(
-            f"Singleton ProcessData zainicjalizowany")
+    def declare_layout(self):
+        self.central = QWidget()
+        self.main_layout = QGridLayout()
 
-        if config['lora_config']:
-            self.serial.LoraSet(config['lora_config'], config['is_config_selected'])
-            self.logger.info(f"Konfiguracja LoRa ustawiona: {config['lora_config']}")
 
-        self.serial.telemetry_received.connect(self.processor.handle_telemetry)
-        self.serial.transmission_info_received.connect(self.processor.handle_transmission_info)
-        self.processor.processed_data_ready.connect(self.handle_processed_data)
+        self.central.setLayout(self.main_layout)
+        self.setCentralWidget(self.central)
 
-        # # Wykresy
-        # self.alt_plot = LivePlot(title="Altitude", color='b')
-        # self.velocity_plot = LivePlot(title="Velocity", color='r')
-        # self.pitch_plot = LivePlot(title="Pitch", color='y')
-        # self.roll_plot = LivePlot(title="Roll", color='g')
-        #
-        # # Konsola
-        # self.console = QTextEdit()
-        # self.console.setReadOnly(True)
-        # self.console.setStyleSheet("background-color: #1f1f1f; color: white; font-family: monospace;")
-        #
-        # # Etykiety
-        # self.label_info = QLabel(f"Pitch: {self.current_data['pitch']:.2f}°, Roll: {self.current_data['roll']:.2f}°\n"f"V: {self.current_data['velocity']:.2f} m/s, H: {self.current_data['altitude']:.2f} m")
-        # self.label_info.setStyleSheet("color: white; font-size: 18px;")
-        #
-        # self.label_pos = QLabel("Pos: --  --  ")
-        # self.label_pos.setStyleSheet("color: white; font-size: 18px;")
-        #
-        # # Przyciski
-        # self.start_button = QPushButton("Start")
-        # self.apogee_button = QPushButton("Apogee")
-        # self.landing_button = QPushButton("Descent")
-        # self.calib_button = QPushButton("Calibration: Off")
-        # self.engine_button = QPushButton("Engine: Off")
-        # self.recovery_button = QPushButton("Recovery: Off")
-        # self.signal_button = QPushButton("Signal: None")
-        #
-        # buttons = [
-        #     self.start_button, self.apogee_button, self.landing_button,
-        #     self.calib_button, self.engine_button, self.recovery_button,
-        #     self.signal_button
-        # ]
-        #
-        # for btn in buttons:
-        #     btn.setStyleSheet("""
-        #         QPushButton {
-        #             border: 1px solid white;
-        #             border-radius: 3px;
-        #             color: red;
-        #             padding: 3px;
-        #             min-width: 120px;
-        #             margin: 1px;
-        #             font-size: 12px;
-        #         }
-        #     """)
-        #
-        #
-        # # Mapa 250x250px
-        # self.initialize_map()
-        # self.map_view = QWebEngineView()
-        # self.map_view.setFixedSize(250, 250)
-        # self.map_view.setStyleSheet("""
-        #     QWebEngineView {
-        #         background-color: black;
-        #         border: 1px solid #444;
-        #         border-radius: 3px;
-        #     }
-        # """)
-        # self.update_map_view()
-        #
-        # central = QWidget()
-        # main_layout = QGridLayout()
-        # main_layout.setContentsMargins(5, 5, 5, 5)
-        # main_layout.setSpacing(5)
-        #
-        # # Główny układ (QGridLayout)
-        # central = QWidget()
-        # main_layout = QGridLayout()
-        # main_layout.setContentsMargins(5, 5, 5, 5)
-        # main_layout.setSpacing(5)
-        #
-        # # Górny wiersz - altitude i velocity
-        # top_plots_row = QHBoxLayout()
-        # top_plots_row.setContentsMargins(0, 0, 0, 0)
-        # top_plots_row.setSpacing(5)
-        # top_plots_row.addWidget(self.alt_plot, 1)
-        # top_plots_row.addWidget(self.velocity_plot, 1)
-        #
-        # # Dolny wiersz - pitch i roll
-        # bottom_plots_row = QHBoxLayout()
-        # bottom_plots_row.setContentsMargins(0, 0, 0, 0)
-        # bottom_plots_row.setSpacing(5)
-        # bottom_plots_row.addWidget(self.pitch_plot, 1)
-        # bottom_plots_row.addWidget(self.roll_plot, 1)
-        #
-        # # Panel boczny
-        # side_panel = self.create_side_panel()
-        #
-        # # Ustawienie elementów w siatce
-        # main_layout.addLayout(top_plots_row, 0, 0)
-        # main_layout.addLayout(bottom_plots_row, 1, 0)
-        # main_layout.addWidget(self.console, 2, 0, 1,
-        #                       2)
-        # main_layout.addWidget(side_panel, 0, 1, 2,
-        #                       1)
-        #
-        # main_layout.setRowStretch(0,
-        #                           4)
-        # main_layout.setRowStretch(1,
-        #                           4)
-        # main_layout.setRowStretch(2,
-        #                           1)
-        #
-        # # Proporcje kolumn (80% wykresy, 20% panel boczny)
-        # main_layout.setColumnStretch(0, 4)
-        # main_layout.setColumnStretch(1, 1)
-        #
-        # central.setLayout(main_layout)
-        # self.setCentralWidget(central)
-        #
-        # self.serial.start_reading()
+    def declare_widgets(self):
+        global_status_label = QLabel("Global status: Not connected")
+        global_status_label.setStyleSheet("color: white; font-size: 18px;")
+        self.main_layout.addWidget(global_status_label, 0, 0, 1, 2)
 
     # def create_side_panel(self):
     #     """Tworzy panel boczny z mapą i przyciskami"""
