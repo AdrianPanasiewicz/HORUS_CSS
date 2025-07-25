@@ -1,11 +1,11 @@
 import sys
 import logging
-from PyQt5.QtWidgets import (QApplication, QDialog,
+from PyQt6.QtWidgets import  (QDialog,
                              QVBoxLayout, QHBoxLayout,
                              QLabel,
                              QComboBox, QPushButton,
                              QGroupBox)
-from PyQt5.QtCore import Qt
+
 import serial.tools.list_ports
 
 

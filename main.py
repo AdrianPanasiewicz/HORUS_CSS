@@ -1,7 +1,7 @@
 import sys
 import logging
 import platform
-from PyQt5.QtWidgets import (QApplication, QDialog)
+from PyQt6.QtWidgets import QApplication, QDialog
 from gui.main_window import MainWindow
 from core.serial_config import SerialConfigDialog
 from core.utils import Utils
@@ -27,7 +27,7 @@ def main():
     app = QApplication(sys.argv)
 
     config_dialog = SerialConfigDialog()
-    if config_dialog.exec_() == QDialog.Accepted:
+    if config_dialog.exec() == QDialog.DialogCode.Accepted:
         config = config_dialog.get_settings()
         logger.info(f"Konfiguracja portu załadowana: {config}")
     else:
@@ -37,7 +37,7 @@ def main():
     window = MainWindow(config)
     window.resize(800, 600)
     window.show()
-    exit_code = app.exec_()
+    exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
     sys.exit(exit_code)
 
@@ -49,6 +49,5 @@ if __name__ == "__main__":
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     try:
         main()
-        print("Poprawka")
     except Exception as e:
         print("An exception has occurred: ", e)
