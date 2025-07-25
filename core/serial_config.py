@@ -5,9 +5,8 @@ from PyQt6.QtWidgets import  (QDialog,
                              QLabel,
                              QComboBox, QPushButton,
                              QGroupBox)
-
+from PyQt6.QtGui import QIcon
 import serial.tools.list_ports
-
 
 class SerialConfigDialog(QDialog):
     def __init__(self, parent=None):
@@ -42,6 +41,7 @@ class SerialConfigDialog(QDialog):
             QPushButton:hover { background-color: #3d566e; }
             QPushButton:disabled { background-color: #2c3e50; color: #7f8c8d; }
         """)
+        self.setWindowIcon(QIcon(r'gui/black_icon.png'))
 
         self.port_name = ""
         self.baud_rate = 9600
@@ -63,14 +63,7 @@ class SerialConfigDialog(QDialog):
         port_layout = QHBoxLayout()
         port_layout.addWidget(QLabel("Port COM:"))
         self.port_combo = QComboBox()
-        self.port_combo.setStyleSheet("""background-color: #34495e; 
-                color: #ecf0f1; 
-                border: 1px solid #7f8c8d;
-                padding: 5px;
-                border-radius: 4px; 
-                font-size: 12px;
-                max-width: 134px;""")
-
+        self.port_combo.setStyleSheet("max-width: 134px;")
         self.refresh_ports()
         port_layout.addWidget(self.port_combo)
 

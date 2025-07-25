@@ -1,10 +1,14 @@
 import logging
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
-                             QWidget, QVBoxLayout, QHBoxLayout,
+                             QWidget, QVBoxLayout,
+                             QHBoxLayout,
                              QHBoxLayout, QLabel,
                              QPushButton, QGridLayout,
-                             QGridLayout, QVBoxLayout)
-from PyQt6.QtCore import Qt
+                             QGridLayout, QVBoxLayout,
+                             QFrame, QTextBrowser,
+                             QSizePolicy)
+from datetime import datetime
+from PyQt6.QtGui import QIcon, QPixmap
 from core.serial_reader import SerialReader
 from core.process_data import ProcessData
 from core.csv_handler import CsvHandler
@@ -15,6 +19,7 @@ class MainWindow(QMainWindow):
         self.connect_gui_to_backend(config)
         self.declare_variables()
         self.initalizeUI()
+        self.define_separators()
         self.serial.start_reading()
 
     def connect_gui_to_backend(self, config):
@@ -66,32 +71,77 @@ class MainWindow(QMainWindow):
 
     def initalizeUI(self):
         self.setWindowTitle("HORUS-CSS")
-        self.setStyleSheet("""
-            background-color: black; 
-            color: white;
-        """)
+        self.setWindowIcon(QIcon(r'gui/black_icon.png'))
+        self.setStyleSheet(open(r'gui/darkstyle.qss').read())
+        
+
         self.declare_layout()
         self.declare_widgets()
+        self.declare_menu()
 
     def declare_layout(self):
         self.central = QWidget()
-        self.main_layout = QGridLayout()
-
-
-        self.central.setLayout(self.main_layout)
         self.setCentralWidget(self.central)
+        self.main_layout = QGridLayout()
+        self.central.setLayout(self.main_layout)
 
-    def declare_widgets(self):
-        global_status_label = QLabel("Global status: Not connected")
-        global_status_label.setStyleSheet("color: white; font-size: 18px;")
-        self.main_layout.addWidget(global_status_label, 0, 0, 1, 2)
+        # self.main_layout.setRowStretch(0, 0)
+        # self.main_layout.setRowStretch(1, 1)
 
+    def declare_menu(self):
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
         self.option_menu = self.menu.addMenu("Options")
         self.help_menu = self.menu.addMenu("Help")
         exit_action = self.file_menu.addAction("Exit", self.close)
+
+    def declare_widgets(self):
+        global_status_label = QLabel("Global status: Not connected")
+        global_status_label.setStyleSheet("font-size: 30px;")
+        self.main_layout.addWidget(global_status_label,0,0)
+
+        self.hbox_kns = QHBoxLayout()
+        self.main_layout.addLayout(self.hbox_kns, 0, 1)
+
+        kns_logo_space = QLabel()
+        kns_logo_space.setFixedSize(50, 50)
+        kns_logo_space.setScaledContents(True)
+        self.hbox_kns.addWidget(kns_logo_space)
+
+        kns_logo = QPixmap(r"gui/kns_logo.png")
+        kns_logo_space.setPixmap(kns_logo)
+
+        global_status_label = QLabel(
+            "HORUS CSS | LOTUS ONE")
+        global_status_label.setStyleSheet(
+            "color: white; font-size: 30px;")
+        self.hbox_kns.addWidget(global_status_label)
+
+        rocket_trajectory_label = QLabel()
+        rocket_trajectory_label.setScaledContents(True)
+        self.main_layout.addWidget(rocket_trajectory_label,1,0)
+
+        rocket_trajectory_background = QPixmap(r"gui/Professional_graphic.png")
+        rocket_trajectory_label.setPixmap(rocket_trajectory_background)
+        rocket_trajectory_label.setMinimumSize(200, 160)
+        rocket_trajectory_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+
+        self.terminal_output = QTextBrowser()
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: System ready...")
+        self.main_layout.addWidget(self.terminal_output, 2, 0)
+
+    def define_separators(self):
+        pass
+        # separator = QFrame()
+        # # separator.setFrameShape(QFrame.HL)
+        # # separator.setFrameShadow(QFrame.Sunken)
+        # separator.setLineWidth(1)
+        # # separator.setStyleSheet("background-color: white;")
+        # self.main_layout.addWidget(separator, 1, 0, 1, 2)
 
     # def create_side_panel(self):
     #     """Tworzy panel boczny z mapą i przyciskami"""
