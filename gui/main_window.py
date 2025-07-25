@@ -1,4 +1,6 @@
 import logging
+
+import numpy as np
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QWidget, QVBoxLayout,
                              QHBoxLayout,
@@ -6,8 +8,9 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QPushButton, QGridLayout,
                              QGridLayout, QVBoxLayout,
                              QFrame, QTextBrowser,
-                             QSizePolicy)
-from datetime import datetime
+                             QSizePolicy, QGroupBox)
+from gui.time_series_plot import TimeSeriesPlot
+from datetime import datetime, timedelta
 from PyQt6.QtGui import QIcon, QPixmap
 from core.serial_reader import SerialReader
 from core.process_data import ProcessData
@@ -20,6 +23,11 @@ class MainWindow(QMainWindow):
         self.declare_variables()
         self.initalizeUI()
         self.define_separators()
+
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            timestamps, values = self.generate_sample_data()
+            plot.set_data(timestamps, values)
+
         self.serial.start_reading()
 
     def connect_gui_to_backend(self, config):
@@ -45,8 +53,6 @@ class MainWindow(QMainWindow):
         self.processor.processed_data_ready.connect(self.handle_processed_data)
 
     def declare_variables(self):
-        self.now_str = ""
-        self.console_update_counter = 0
         self.start_detection = False
         self.calib_detection = False
         self.apogee_detection = False
@@ -67,16 +73,15 @@ class MainWindow(QMainWindow):
             'snr': 0
         }
 
-        self.signal_quality = "None"
-
     def initalizeUI(self):
         self.setWindowTitle("HORUS-CSS")
-        self.setWindowIcon(QIcon(r'gui/black_icon.png'))
-        self.setStyleSheet(open(r'gui/darkstyle.qss').read())
-        
-
+        self.setWindowIcon(QIcon(r'gui/resources/black_icon.png'))
+        self.setStyleSheet(open(r'gui/resources/darkstyle.qss').read())
+        self.resize(1800, 900)
+        # self.showFullScreen()
         self.declare_layout()
-        self.declare_widgets()
+        self.declare_left_side_widgets()
+        self.declare_right_side_widgets()
         self.declare_menu()
 
     def declare_layout(self):
@@ -85,7 +90,7 @@ class MainWindow(QMainWindow):
         self.main_layout = QGridLayout()
         self.central.setLayout(self.main_layout)
 
-        # self.main_layout.setRowStretch(0, 0)
+        # self.main_layout.setRowStretch(0, 1)
         # self.main_layout.setRowStretch(1, 1)
 
     def declare_menu(self):
@@ -96,33 +101,16 @@ class MainWindow(QMainWindow):
         self.help_menu = self.menu.addMenu("Help")
         exit_action = self.file_menu.addAction("Exit", self.close)
 
-    def declare_widgets(self):
-        global_status_label = QLabel("Global status: Not connected")
+    def declare_left_side_widgets(self):
+        global_status_label = QLabel("Status: not connected")
         global_status_label.setStyleSheet("font-size: 30px;")
         self.main_layout.addWidget(global_status_label,0,0)
 
-        self.hbox_kns = QHBoxLayout()
-        self.main_layout.addLayout(self.hbox_kns, 0, 1)
-
-        kns_logo_space = QLabel()
-        kns_logo_space.setFixedSize(50, 50)
-        kns_logo_space.setScaledContents(True)
-        self.hbox_kns.addWidget(kns_logo_space)
-
-        kns_logo = QPixmap(r"gui/kns_logo.png")
-        kns_logo_space.setPixmap(kns_logo)
-
-        global_status_label = QLabel(
-            "HORUS CSS | LOTUS ONE")
-        global_status_label.setStyleSheet(
-            "color: white; font-size: 30px;")
-        self.hbox_kns.addWidget(global_status_label)
-
         rocket_trajectory_label = QLabel()
         rocket_trajectory_label.setScaledContents(True)
-        self.main_layout.addWidget(rocket_trajectory_label,1,0)
+        self.main_layout.addWidget(rocket_trajectory_label,2,0,2,1)
 
-        rocket_trajectory_background = QPixmap(r"gui/Professional_graphic.png")
+        rocket_trajectory_background = QPixmap(r"gui/resources/Professional_graphic.png")
         rocket_trajectory_label.setPixmap(rocket_trajectory_background)
         rocket_trajectory_label.setMinimumSize(200, 160)
         rocket_trajectory_label.setSizePolicy(
@@ -132,86 +120,140 @@ class MainWindow(QMainWindow):
         current_time = datetime.now().strftime("%H:%M:%S")
         self.terminal_output.append(
             f">{current_time}: System ready...")
-        self.main_layout.addWidget(self.terminal_output, 2, 0)
+        self.terminal_output.setStyleSheet(
+            "font-size: 14px;")
+        self.main_layout.addWidget(self.terminal_output, 4, 0)
+
+
+    def declare_right_side_widgets(self):
+        self.hbox_kns = QHBoxLayout()
+        self.main_layout.addLayout(self.hbox_kns, 0, 2)
+
+        kns_logo_space = QLabel()
+        kns_logo_space.setFixedSize(50, 50)
+        kns_logo_space.setScaledContents(True)
+        self.hbox_kns.addWidget(kns_logo_space)
+
+        kns_logo = QPixmap(r"gui/resources/kns_logo.png")
+        kns_logo_space.setPixmap(kns_logo)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        global_status_label = QLabel(f"Last received packet: {current_time}s")
+        global_status_label.setStyleSheet("font-size: 18px;")
+        self.hbox_kns.addWidget(global_status_label)
+
+        # global_status_label = QLabel(
+        #     "HORUS CSS | LOTUS ONE")
+        # global_status_label.setStyleSheet(
+        #     "color: white; font-size: 30px;")
+        # self.hbox_kns.addWidget(global_status_label)
+
+        #------------------------
+        self.rec_bay_layout = QHBoxLayout()
+        self.rec_bay_group = QGroupBox("Recovery bay status")
+
+        self.time_pres_plot = TimeSeriesPlot()
+        self.time_pres_plot.set_x_label("Time [s]")
+        self.time_pres_plot.set_y_label("Temp [°C]")
+
+        base_time = datetime.now()
+        timestamps = [base_time + timedelta(minutes=i) for i
+                      in range(60)]
+        values = np.random.normal(50, 10, 60).tolist()
+
+        self.time_pres_plot.set_data(timestamps, values)
+
+        self.rec_bay_hbox = QHBoxLayout()
+        self.rec_bay_hbox.addWidget(self.time_pres_plot)
+        self.rec_bay_vbox = QVBoxLayout()
+        self.rec_bay_hbox.addLayout(self.rec_bay_vbox)
+        self.rec_bay_layout.addLayout(self.rec_bay_hbox)
+
+        self.rec_bay_temp_label = QLabel(f"Temperature: 0°C")
+        self.rec_bay_press_label = QLabel(f"Pressure: 0 hPa")
+        self.rec_bay_vbox.addWidget(self.rec_bay_temp_label)
+        self.rec_bay_vbox.addWidget(self.rec_bay_press_label)
+
+        self.rec_bay_group.setLayout(self.rec_bay_layout)
+        self.main_layout.addWidget(self.rec_bay_group, 2, 2)
+        #-------------------------
+
+        self.lora_layout = QHBoxLayout()
+        self.lora_group = QGroupBox("LoRa signal status")
+
+        self.lora_snr_plot = TimeSeriesPlot()
+        self.lora_snr_plot.set_x_label("Time [s]")
+        self.lora_snr_plot.set_y_label("SNR [dB]")
+
+        base_time = datetime.now()
+        timestamps = [base_time + timedelta(minutes=i) for i
+                      in range(120)]
+        values = np.random.normal(2, 0.01, 120).tolist()
+        self.lora_snr_plot.set_data(timestamps, values)
+
+        self.lora_hbox = QHBoxLayout()
+        self.lora_hbox.addWidget(self.lora_snr_plot)
+
+        self.lora_vbox = QVBoxLayout()
+        self.lora_snr_label = QLabel("SNR: 0 dB")
+        self.lora_freq_label = QLabel("RSSI: 0 dBm")
+        self.lora_vbox.addWidget(self.lora_snr_label)
+        self.lora_vbox.addWidget(self.lora_freq_label)
+
+        self.lora_hbox.addLayout(self.lora_vbox)
+        self.lora_layout.addLayout(self.lora_hbox)
+
+        self.lora_group.setLayout(self.lora_layout)
+        self.main_layout.addWidget(self.lora_group, 3, 2)
+        # ------------------------
+
+        self.gps_layout = QHBoxLayout()
+        self.gps_group = QGroupBox("GPS signal status")
+
+        self.gps_snr_plot = TimeSeriesPlot()
+        self.gps_snr_plot.set_x_label("Time [s]")
+        self.gps_snr_plot.set_y_label("SNR [dB]")
+
+        self.gps_hbox = QHBoxLayout()
+        self.gps_hbox.addWidget(self.gps_snr_plot)
+
+        self.gps_vbox = QVBoxLayout()
+        self.gps_snr_label = QLabel("SNR: 0 dB")
+        self.gps_sat_label = QLabel("RSSI: 0 dBm")
+        self.gps_vbox.addWidget(self.gps_snr_label)
+        self.gps_vbox.addWidget(self.gps_sat_label)
+
+        self.gps_hbox.addLayout(self.gps_vbox)
+        self.gps_layout.addLayout(self.gps_hbox)
+
+        self.gps_group.setLayout(self.gps_layout)
+        self.main_layout.addWidget(self.gps_group, 4, 2, 2,1)
+
+    def generate_sample_data(self):
+        base_time = datetime.now()
+        timestamps = [base_time + timedelta(minutes=i) for i
+                      in range(200)]
+        values = np.random.normal(10, 5, 200).tolist()
+        return timestamps, values
+
 
     def define_separators(self):
-        pass
-        # separator = QFrame()
-        # # separator.setFrameShape(QFrame.HL)
-        # # separator.setFrameShadow(QFrame.Sunken)
-        # separator.setLineWidth(1)
-        # # separator.setStyleSheet("background-color: white;")
-        # self.main_layout.addWidget(separator, 1, 0, 1, 2)
-
-    # def create_side_panel(self):
-    #     """Tworzy panel boczny z mapą i przyciskami"""
-    #     panel = QWidget()
-    #     layout = QVBoxLayout()
-    #     layout.setContentsMargins(2, 2, 2, 2)
-    #     layout.setSpacing(5)
-    #
-    #     # Etykieta z danymi (nad mapą)
-    #     layout.addWidget(self.label_info,
-    #                      alignment=Qt.AlignCenter)
-    #
-    #     # Mapa
-    #     layout.addWidget(self.map_view,
-    #                      alignment=Qt.AlignCenter)
-    #
-    #     # Etykieta z pozycją (pod mapą)
-    #     layout.addWidget(self.label_pos,
-    #                      alignment=Qt.AlignCenter)
-    #
-    #     # Przyciski w siatce
-    #     button_grid = QGridLayout()
-    #     button_grid.setContentsMargins(0, 0, 0, 0)
-    #     button_grid.setSpacing(3)
-    #     buttons = [
-    #         (self.start_button, 0, 0),
-    #         (self.apogee_button, 0, 1),
-    #         (self.landing_button, 1, 0),
-    #         (self.calib_button, 1, 1),
-    #         (self.engine_button, 2, 0),
-    #         (self.recovery_button, 2, 1),
-    #         (self.signal_button, 3, 0, 1, 2)
-    #     ]
-    #
-    #     for btn, row, col, *span in buttons:
-    #         if span:
-    #             button_grid.addWidget(btn, row, col, *span)
-    #         else:
-    #             button_grid.addWidget(btn, row, col)
-    #
-    #     layout.addLayout(button_grid)
-    #     panel.setLayout(layout)
-    #     panel.setMinimumWidth(270)
-    #     panel.setMaximumWidth(300)
-    #     return panel
+        upper_separator = QFrame()
+        upper_separator.setFrameShape(QFrame.Shape.HLine)
+        upper_separator.setFrameShadow(
+            QFrame.Shadow.Sunken)
+        upper_separator.setStyleSheet(
+            "color: white;")
+        self.main_layout.addWidget(upper_separator, 1, 0, 1, 3)
 
 
-    # def initialize_map(self):
-    #     """Inicjalizuje mapę 250x250px"""
-    #     self.map = folium.Map(
-    #         location=[self.current_lat, self.current_lng],
-    #         zoom_start=15,
-    #         width=250,
-    #         height=250,
-    #         control_scale=True,
-    #         tiles='OpenStreetMap'
-    #     )
-    #
-    #     folium.Marker(
-    #         [self.current_lat, self.current_lng],
-    #         popup=f"LOTUS: {self.current_lat:.6f}, {self.current_lng:.6f}",
-    #         icon=folium.Icon(color="green", icon="flag",
-    #                          prefix='fa')
-    #     ).add_to(self.map)
-    #
-    #     self.map.save('map.html')
-    #
-    # def update_map_view(self):
-    #     """Aktualizuje widok mapy"""
-    #     self.map_view.setHtml(open('map.html').read())
+        vert_separator = QFrame()
+        vert_separator.setFrameShape(QFrame.Shape.VLine)
+        vert_separator.setFrameShadow(
+            QFrame.Shadow.Sunken)
+        vert_separator.setStyleSheet(
+            "color: white;")
+        self.main_layout.addWidget(vert_separator, 0, 1, 6, 1)
 
     def handle_processed_data(self, data):
         pass

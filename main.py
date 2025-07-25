@@ -35,7 +35,6 @@ def main():
         logger.info("Użytkownik zrezygnował z portu – używam domyślnych ustawień")
 
     window = MainWindow(config)
-    window.resize(800, 600)
     window.show()
     exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
