@@ -63,6 +63,14 @@ class SerialConfigDialog(QDialog):
         port_layout = QHBoxLayout()
         port_layout.addWidget(QLabel("Port COM:"))
         self.port_combo = QComboBox()
+        self.port_combo.setStyleSheet("""background-color: #34495e; 
+                color: #ecf0f1; 
+                border: 1px solid #7f8c8d;
+                padding: 5px;
+                border-radius: 4px; 
+                font-size: 12px;
+                max-width: 134px;""")
+
         self.refresh_ports()
         port_layout.addWidget(self.port_combo)
 

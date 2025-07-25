@@ -86,6 +86,13 @@ class MainWindow(QMainWindow):
         global_status_label.setStyleSheet("color: white; font-size: 18px;")
         self.main_layout.addWidget(global_status_label, 0, 0, 1, 2)
 
+        self.menu = self.menuBar()
+        self.file_menu = self.menu.addMenu("File")
+        self.view_menu = self.menu.addMenu("View")
+        self.option_menu = self.menu.addMenu("Options")
+        self.help_menu = self.menu.addMenu("Help")
+        exit_action = self.file_menu.addAction("Exit", self.close)
+
     # def create_side_panel(self):
     #     """Tworzy panel boczny z mapą i przyciskami"""
     #     panel = QWidget()
