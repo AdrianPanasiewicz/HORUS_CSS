@@ -94,14 +94,10 @@ class MainWindow(QMainWindow):
         self.main_layout = QGridLayout()
         self.central.setLayout(self.main_layout)
 
-        # self.main_layout.setRowStretch(0, 1)
-        # self.main_layout.setRowStretch(1, 1)
-
     def declare_menu(self):
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
-        self.option_menu = self.menu.addMenu("Options")
         self.help_menu = self.menu.addMenu("Help")
         self.test_menu = self.menu.addMenu("Test")
         self.theme_menu = self.view_menu.addMenu("Themes")
@@ -112,14 +108,21 @@ class MainWindow(QMainWindow):
 
         self.view_menu.addAction("Toggle Fullscreen", self.toggle_fullscreen)
         self.view_menu.addAction("Toggle Status Bar", self.toggle_status_bar)
-
-        self.option_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
-
+        self.view_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
+        self.view_menu.addSeparator()
+        self.view_menu.addAction("Clear Terminal", self.clear_terminal)
+        self.view_menu.addAction("Clear Plots", self.clear_plots)
+        self.view_menu.addAction("Clear All", self.clear_all)
 
         self.help_menu.addAction("About application", self.show_about_app_dialog)
         self.help_menu.addAction("About KNS LiK", self.show_about_kns_dialog)
 
-        # Define available themes
+        self.test_menu.addAction("Start Terminal Simulation", self.start_terminal_simulation)
+        self.test_menu.addAction("Stop Terminal Simulation", self.stop_terminal_simulation)
+        self.test_menu.addSeparator()
+        self.test_menu.addAction("Start Plot Simulation", self.start_plot_simulation)
+        self.test_menu.addAction("Stop Plot Simulation", self.stop_plot_simulation)
+
         self.themes = {
             "Dark Blue": "dark_blue.qss",
             "Gray": "gray.qss",
@@ -133,7 +136,6 @@ class MainWindow(QMainWindow):
             action = self.theme_menu.addAction(theme_name)
             action.triggered.connect(lambda _, t=theme_file: self.apply_theme(t))
             self.theme_actions[theme_name] = action
-
 
     def declare_left_side_widgets(self):
         self.left_layout = QVBoxLayout()
@@ -388,6 +390,7 @@ class MainWindow(QMainWindow):
         self.heartbeat_timer.start(500)
 
     def setup_status_bar(self):
+        self.status_bar_visible = True
         self.status_logo = QLabel()
         self.status_logo.setFixedSize(24, 24)
         self.status_logo.setScaledContents(True)
@@ -432,6 +435,123 @@ class MainWindow(QMainWindow):
             self.heartbeat_state = not self.heartbeat_state
             color = "red" if self.heartbeat_state else "transparent"
             self.heartbeat_placeholder.setStyleSheet(f"color: {color}; font-size: 14px;")
+
+    def start_terminal_simulation(self):
+        if not hasattr(self, 'simulation_timer'):
+            self.simulation_timer = QTimer()
+            self.simulation_timer.timeout.connect(self.generate_terminal_output)
+
+        self.simulation_interval = max(500, int(np.random.normal(1000, 200)))
+        self.simulation_timer.start(self.simulation_interval)
+        self.logger.info("Started terminal simulation")
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: yellow;'>Started terminal simulation (interval: "
+            f"{self.simulation_interval}ms)</span>")
+
+    def stop_terminal_simulation(self):
+        if hasattr(self, 'simulation_timer') and self.simulation_timer.isActive():
+            self.simulation_timer.stop()
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: yellow;'>Stopped terminal simulation</span>")
+            self.logger.info("Stopped terminal simulation")
+
+    def generate_terminal_output(self):
+        current_time = datetime.now().strftime("%H:%M:%S")
+        messages = [
+            f"<span style='color: yellow;'>SIM</span>: Telemetry packet received - velocity: "
+            f"{np.random.normal(50, 10):.2f} m/s",
+            f"<span style='color: yellow;'>SIM</span>: GPS coordinates - lat: {np.random.normal(52.25, 0.01):.6f}, lon: {np.random.normal(20.90, 0.01):.6f}",
+            f"<span style='color: yellow;'>SIM</span>: System status OK - CPU: {np.random.randint(10, 30)}%, "
+            f"MEM: {np.random.randint(200, 400)}MB",
+            f"<span style='color: yellow;'>SIM</span>: LoRa signal - RSSI: {np.random.normal(-90, 5):.1f} dBm, SNR: {np.random.normal(5, 2):.1f} dB",
+            f"<span style='color: yellow;'>SIM</span>: Altitude: {np.random.normal(1500, 200):.1f} m, Pressure: "
+            f"{np.random.normal(800, 50):.1f} hPa",
+            f"<span style='color: yellow;'>SIM</span>: Rocket orientation - pitch: {np.random.normal(0, 5):.1f}°, roll: {np.random.normal(0, 5):.1f}°"
+        ]
+
+        message = np.random.choice(messages)
+        self.terminal_output.append(f">{current_time}: {message}")
+
+        self.simulation_interval = max(500, int(np.random.normal(1000, 200)))
+        self.simulation_timer.setInterval(self.simulation_interval)
+    def clear_terminal(self):
+        self.terminal_output.clear()
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: Terminal cleared")
+        self.logger.info("Terminal cleared")
+
+    def start_plot_simulation(self):
+        if not hasattr(self, 'plot_sim_timer'):
+            self.plot_sim_timer = QTimer()
+            self.plot_sim_timer.timeout.connect(self.generate_plot_data)
+
+        self.plot_sim_interval = 500
+        self.plot_sim_timer.start(self.plot_sim_interval)
+        self.logger.info("Started plot simulation")
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: Started plot simulation (interval: {self.plot_sim_interval}ms)")
+
+    def stop_plot_simulation(self):
+        if hasattr(self, 'plot_sim_timer') and self.plot_sim_timer.isActive():
+            self.plot_sim_timer.stop()
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: Stopped plot simulation")
+            self.logger.info("Stopped plot simulation")
+
+    def generate_plot_data(self):
+        current_time = datetime.now()
+
+        temp_value = np.random.normal(50, 5)
+        self.time_pres_plot.add_point(current_time, temp_value)
+        self.rec_bay_temp_label.setText(f"Temperature: {temp_value:.1f}°C")
+
+        if np.random.random() < 0.2:
+            pressure_value = np.random.normal(800, 30)
+            self.rec_bay_press_label.setText(f"Pressure: {pressure_value:.1f} hPa")
+
+        snr_value = np.random.normal(5, 1.5)
+        self.lora_snr_plot.add_point(current_time, snr_value)
+        self.lora_snr_label.setText(f"SNR: {snr_value:.1f} dB")
+
+        if np.random.random() < 0.3:  # 30% chance to update RSSI
+            rssi_value = np.random.normal(-90, 3)
+            self.lora_freq_label.setText(f"RSSI: {rssi_value:.1f} dBm")
+
+        gps_snr_value = np.random.normal(25, 3)
+        self.gps_snr_plot.add_point(current_time, gps_snr_value)
+        self.gps_snr_label.setText(f"SNR: {gps_snr_value:.1f} dB")
+
+        if np.random.random() < 0.4:
+            sat_value = np.random.normal(-100, 5)
+            self.gps_sat_label.setText(f"RSSI: {sat_value:.1f} dBm")
+
+    def clear_plots(self):
+        self.time_pres_plot.clear_data()
+        self.lora_snr_plot.clear_data()
+        self.gps_snr_plot.clear_data()
+
+        self.rec_bay_temp_label.setText("Temperature: 0°C")
+        self.rec_bay_press_label.setText("Pressure: 0 hPa")
+        self.lora_snr_label.setText("SNR: 0 dB")
+        self.lora_freq_label.setText("RSSI: 0 dBm")
+        self.gps_snr_label.setText("SNR: 0 dB")
+        self.gps_sat_label.setText("RSSI: 0 dBm")
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: All plots cleared")
+        self.logger.info("Plots cleared")
+
+    def clear_all(self):
+        self.clear_plots()
+        self.clear_terminal()
 
     def handle_processed_data(self, data):
         pass
