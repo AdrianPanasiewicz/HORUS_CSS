@@ -259,13 +259,6 @@ class MainWindow(QMainWindow):
 
 
     def define_separators(self):
-        # upper_separator = QFrame()
-        # upper_separator.setFrameShape(QFrame.Shape.HLine)
-        # upper_separator.setFrameShadow(
-        #     QFrame.Shadow.Sunken)
-        # upper_separator.setStyleSheet(
-        #     "color: white;")
-        # self.main_layout.addWidget(upper_separator, 1, 0, 1, 3)
 
         vert_separator = QFrame()
         vert_separator.setFrameShape(QFrame.Shape.VLine)
@@ -331,7 +324,6 @@ class MainWindow(QMainWindow):
             self.showFullScreen()
 
     def open_session_directory(self):
-        """Open the session directory in the system file explorer"""
         import os
         import platform
         import subprocess
@@ -489,20 +481,20 @@ class MainWindow(QMainWindow):
             self.plot_sim_timer = QTimer()
             self.plot_sim_timer.timeout.connect(self.generate_plot_data)
 
-        self.plot_sim_interval = 500
+        self.plot_sim_interval = max(500, int(np.random.normal(1000, 200)))
         self.plot_sim_timer.start(self.plot_sim_interval)
         self.logger.info("Started plot simulation")
 
         current_time = datetime.now().strftime("%H:%M:%S")
         self.terminal_output.append(
-            f">{current_time}: Started plot simulation (interval: {self.plot_sim_interval}ms)")
+            f">{current_time}: <span style='color: yellow;'>Started plot simulation (interval: {self.plot_sim_interval}ms)</span>")
 
     def stop_plot_simulation(self):
         if hasattr(self, 'plot_sim_timer') and self.plot_sim_timer.isActive():
             self.plot_sim_timer.stop()
             current_time = datetime.now().strftime("%H:%M:%S")
             self.terminal_output.append(
-                f">{current_time}: Stopped plot simulation")
+                f">{current_time}: <span style='color: yellow;'>Stopped plot simulation</span>")
             self.logger.info("Stopped plot simulation")
 
     def generate_plot_data(self):
