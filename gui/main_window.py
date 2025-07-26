@@ -103,35 +103,21 @@ class MainWindow(QMainWindow):
         self.view_menu = self.menu.addMenu("View")
         self.option_menu = self.menu.addMenu("Options")
         self.help_menu = self.menu.addMenu("Help")
+        self.test_menu = self.menu.addMenu("Test")
         self.theme_menu = self.view_menu.addMenu("Themes")
 
         self.file_menu.addAction("Exit", self.close)
         self.file_menu.addAction("Open Session Directory", self.open_session_directory)
         self.file_menu.addAction("Show Session Path", self.show_session_directory_path)
-        self.file_menu.addSeparator()
-        self.file_menu.addAction("Consectetur", lambda: print("Consectetur"))
-        self.file_menu.addAction("Tempor Incididunt", lambda: print("Tempor Incididunt"))
-        self.file_menu.addAction("Ut Labore", lambda: print("Ut Labore"))
 
         self.view_menu.addAction("Toggle Fullscreen", self.toggle_fullscreen)
         self.view_menu.addAction("Toggle Status Bar", self.toggle_status_bar)
-        self.view_menu.addSeparator()
-        self.view_menu.addAction("Magna Aliqua", lambda: print("Magna Aliqua"))
-        self.view_menu.addAction("Ut Enim", lambda: print("Ut Enim"))
-        self.view_menu.addAction("Minim Veniam", lambda: print("Minim Veniam"))
 
         self.option_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
-        self.option_menu.addSeparator()
-        self.option_menu.addAction("Quis Nostrud", lambda: print("Quis Nostrud"))
-        self.option_menu.addAction("Exercitation", lambda: print("Exercitation"))
-        self.option_menu.addAction("Ullamco", lambda: print("Ullamco"))
 
-        self.help_menu.addAction("About application", self.show_about_dialog)
-        self.help_menu.addAction("About KNS LiK", self.show_about_dialog)
-        self.file_menu.addSeparator()
-        self.help_menu.addAction("Laboris Nisi", lambda: print("Laboris Nisi"))
-        self.help_menu.addAction("Ut Aliquip", lambda: print("Ut Aliquip"))
-        self.help_menu.addAction("Ex Ea Commodo", lambda: print("Ex Ea Commodo"))
+
+        self.help_menu.addAction("About application", self.show_about_app_dialog)
+        self.help_menu.addAction("About KNS LiK", self.show_about_kns_dialog)
 
         # Define available themes
         self.themes = {
@@ -296,7 +282,7 @@ class MainWindow(QMainWindow):
         except Exception as e:
             self.logger.error(f"Error loading theme {theme_file}: {str(e)}")
 
-    def show_about_dialog(self):
+    def show_about_app_dialog(self):
         about_text = """
         <div style="text-align: justify;">
             <h2>HOURS Communication & System Status Station</h2>
@@ -312,6 +298,29 @@ class MainWindow(QMainWindow):
         """
 
         QMessageBox.about(self, "About HORUS-CSS", about_text)
+
+    def show_about_kns_dialog(self):
+        about_text = """
+        <div style="text-align: justify;">
+            <h2>Scientific Association of Aviation and Astronautics Students of MUT</h2>
+            <p><b>Description:</b> The Scientific Circle of Aviation and Astronautics (KNS) brings together the best 
+            civilian and military students studying Aviation and Astronautics, as well as students from other fields 
+            present at the Faculty of Mechatronics, Armament, and Aviation, who deepen their knowledge in collaboration 
+            with university staff.</p>
+            <p>The main objectives of the Scientific Circle of Aviation and Astronautics Students are:</p>
+            <ul>
+                <li>Developing engineering skills in designing and building UAVs and other flying structures;</li>
+                <li>Fostering students' interests in building and developing UAVs, model rockets, and topics related to 
+                aviation technologies;</li>
+                <li>Enhancing skills in using market-available software related to engineering work;</li>
+                <li>Developing soft skills in project management, teamwork, and team communication.</li>
+            </ul>
+            The Circle plans to develop the existing skills of its members, improve their soft and technical 
+            competencies, and, above all, undertake projects characterized by a higher level of complexity and 
+            advanced technical and technological sophistication.
+        </div>
+        """
+        QMessageBox.about(self, "About KNS LiK", about_text)
 
     def toggle_fullscreen(self):
         if self.isFullScreen():
@@ -382,7 +391,7 @@ class MainWindow(QMainWindow):
         self.status_logo = QLabel()
         self.status_logo.setFixedSize(24, 24)
         self.status_logo.setScaledContents(True)
-        logo_pixmap = QPixmap(r"gui/resources/kns_logo.png").scaled(24, 24)
+        logo_pixmap = QPixmap(r"gui/resources/black_icon_without_background.png").scaled(30, 30)
         self.status_logo.setPixmap(logo_pixmap)
         self.statusBar().addWidget(self.status_logo)
 
