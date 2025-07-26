@@ -1498,7 +1498,7 @@ QToolBox  {
     border: none;
 }
 
-QToolBox::tab { /* TODO */
+QToolBox::tab {
     color: #c9c8c7;
     background-color: #71706d;
     border: 1px transparent #51504d;

@@ -1,4 +1,5 @@
 import logging
+import os
 
 import numpy as np
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
@@ -8,7 +9,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QPushButton, QGridLayout,
                              QGridLayout, QVBoxLayout,
                              QFrame, QTextBrowser,
-                             QSizePolicy, QGroupBox)
+                             QSizePolicy, QGroupBox, QMessageBox)
 from gui.time_series_plot import TimeSeriesPlot
 from datetime import datetime, timedelta
 from PyQt6.QtSvgWidgets import QSvgWidget
@@ -100,7 +101,7 @@ class MainWindow(QMainWindow):
         self.view_menu = self.menu.addMenu("View")
         self.option_menu = self.menu.addMenu("Options")
         self.help_menu = self.menu.addMenu("Help")
-
+        self.theme_menu = self.view_menu.addMenu("Themes")
 
         self.file_menu.addAction("Exit", self.close)
         self.file_menu.addAction("Consectetur", lambda: print("Consectetur"))
@@ -115,9 +116,25 @@ class MainWindow(QMainWindow):
         self.option_menu.addAction("Exercitation", lambda: print("Exercitation"))
         self.option_menu.addAction("Ullamco", lambda: print("Ullamco"))
 
+        self.help_menu.addAction("About", self.show_about_dialog)
         self.help_menu.addAction("Laboris Nisi", lambda: print("Laboris Nisi"))
         self.help_menu.addAction("Ut Aliquip", lambda: print("Ut Aliquip"))
         self.help_menu.addAction("Ex Ea Commodo", lambda: print("Ex Ea Commodo"))
+
+        # Define available themes
+        self.themes = {
+            "Dark Blue": "dark_blue.qss",
+            "Gray": "gray.qss",
+            "Marble": "marble.qss",
+            "Slick Dark": "slick_dark.qss",
+            "Uniform Dark": "unform_dark.qss"
+        }
+
+        self.theme_actions = {}
+        for theme_name, theme_file in self.themes.items():
+            action = self.theme_menu.addAction(theme_name)
+            action.triggered.connect(lambda _, t=theme_file: self.apply_theme(t))
+            self.theme_actions[theme_name] = action
 
 
     def declare_left_side_widgets(self):
@@ -273,6 +290,32 @@ class MainWindow(QMainWindow):
         vert_separator.setStyleSheet(
             "color: white;")
         self.main_layout.addWidget(vert_separator, 0, 1, 6, 1)
+
+    def apply_theme(self, theme_file):
+        try:
+            theme_path = os.path.join("gui", "resources", "themes", theme_file)
+            with open(theme_path, "r") as file:
+                self.setStyleSheet(file.read())
+            self.logger.info(f"Theme changed to: {theme_file}")
+        except Exception as e:
+            self.logger.error(f"Error loading theme {theme_file}: {str(e)}")
+
+    def show_about_dialog(self):
+        about_text = """
+        <div style="text-align: justify;">
+            <h2>HOURS Communication & System Status Station</h2>
+            <p><b>Version:</b> 0.1.0</p>
+            <p><b>Description:</b> The ground station is responsible for controlling the AGS and displaying data regarding 
+            the quality of the wireless connection and the status of the rocket's systems. It is a subcomponent of a
+            HOURS project, which is also as a part of a larger LOTUS ONE project Scientific Association of Aviation and
+            Astronautics Students of MUT.</p>
+            <p><b>Authors:</b> Adrian Panasiewicz, Filip Sudak</p>
+            <p><b>Copyright:</b> © 2025 KNS LiK </p>
+            <p>Built with PyQt6</p>
+        </div>
+        """
+
+        QMessageBox.about(self, "About HORUS-CSS", about_text)
 
     def handle_processed_data(self, data):
         pass

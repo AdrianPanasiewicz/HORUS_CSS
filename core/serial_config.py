@@ -1,10 +1,12 @@
 import sys
 import logging
-from PyQt6.QtWidgets import  (QDialog,
+
+from PyQt6.QtCore import QEvent, Qt
+from PyQt6.QtWidgets import (QDialog,
                              QVBoxLayout, QHBoxLayout,
                              QLabel,
                              QComboBox, QPushButton,
-                             QGroupBox)
+                             QGroupBox, QMessageBox)
 from PyQt6.QtGui import QIcon
 import serial.tools.list_ports
 
@@ -42,6 +44,9 @@ class SerialConfigDialog(QDialog):
             QPushButton:disabled { background-color: #2c3e50; color: #7f8c8d; }
         """)
         self.setWindowIcon(QIcon(r'gui/resources/black_icon.png'))
+        self.setWindowFlags(self.windowFlags() |
+                            Qt.WindowType.WindowContextHelpButtonHint)
+
 
         self.port_name = ""
         self.baud_rate = 9600
@@ -193,6 +198,23 @@ class SerialConfigDialog(QDialog):
         layout.addLayout(btn_layout)
 
         self.setLayout(layout)
+
+        self.port_combo.setWhatsThis("Wybierz port COM, do którego podłączony jest moduł.")
+        refresh_btn.setWhatsThis("Kliknij, aby odświeżyć listę dostępnych portów szeregowych.")
+        self.baud_combo.setWhatsThis("Wybierz prędkość transmisji (baud rate) dla komunikacji szeregowej.")
+        self.freq_combo.setWhatsThis("Wybierz częstotliwość pracy LoRa (MHz).")
+        self.sf_combo.setWhatsThis(
+            "Wybierz spreading factor (SF) - im większa wartość, tym większy zasięg i mniejsza przepustowość.")
+        self.bw_combo.setWhatsThis("Wybierz szerokość pasma LoRa (BW) w kHz.")
+        self.txpr_combo.setWhatsThis("Wybierz długość preambuły nadawczej (TXPR).")
+        self.rxpr_combo.setWhatsThis("Wybierz długość preambuły odbiorczej (RXPR).")
+        self.pow_combo.setWhatsThis("Ustaw moc nadawania LoRa (w dBm).")
+        self.crc_combo.setWhatsThis("Włącz lub wyłącz sumę kontrolną CRC.")
+        self.iq_combo.setWhatsThis("Ustawienie odwrócenia bitów IQ (ON/OFF).")
+        self.net_combo.setWhatsThis("Wybierz tryb LoRaWAN (ON - aktywny, OFF - klasyczny tryb LoRa).")
+        connect_btn.setWhatsThis("Połącz z portem szeregowym i skonfiguruj moduł LoRa według ustawień.")
+        connect_no_lora_btn.setWhatsThis("Połącz tylko z portem szeregowym bez konfiguracji LoRa.")
+        cancel_btn.setWhatsThis("Zamknij okno i kontynuuj bez połączenia z portem szeregowym.")
 
     def refresh_ports(self):
         self.port_combo.clear()
