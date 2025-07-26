@@ -2,6 +2,7 @@ import logging
 import os
 
 import numpy as np
+from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QWidget, QVBoxLayout,
                              QHBoxLayout,
@@ -25,6 +26,7 @@ class MainWindow(QMainWindow):
         self.declare_variables()
         self.initalizeUI()
         self.define_separators()
+        self.setup_status_bar()
 
         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
             timestamps, values = self.generate_sample_data()
@@ -104,19 +106,29 @@ class MainWindow(QMainWindow):
         self.theme_menu = self.view_menu.addMenu("Themes")
 
         self.file_menu.addAction("Exit", self.close)
+        self.file_menu.addAction("Open Session Directory", self.open_session_directory)
+        self.file_menu.addAction("Show Session Path", self.show_session_directory_path)
+        self.file_menu.addSeparator()
         self.file_menu.addAction("Consectetur", lambda: print("Consectetur"))
         self.file_menu.addAction("Tempor Incididunt", lambda: print("Tempor Incididunt"))
         self.file_menu.addAction("Ut Labore", lambda: print("Ut Labore"))
 
+        self.view_menu.addAction("Toggle Fullscreen", self.toggle_fullscreen)
+        self.view_menu.addAction("Toggle Status Bar", self.toggle_status_bar)
+        self.view_menu.addSeparator()
         self.view_menu.addAction("Magna Aliqua", lambda: print("Magna Aliqua"))
         self.view_menu.addAction("Ut Enim", lambda: print("Ut Enim"))
         self.view_menu.addAction("Minim Veniam", lambda: print("Minim Veniam"))
 
+        self.option_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
+        self.option_menu.addSeparator()
         self.option_menu.addAction("Quis Nostrud", lambda: print("Quis Nostrud"))
         self.option_menu.addAction("Exercitation", lambda: print("Exercitation"))
         self.option_menu.addAction("Ullamco", lambda: print("Ullamco"))
 
-        self.help_menu.addAction("About", self.show_about_dialog)
+        self.help_menu.addAction("About application", self.show_about_dialog)
+        self.help_menu.addAction("About KNS LiK", self.show_about_dialog)
+        self.file_menu.addSeparator()
         self.help_menu.addAction("Laboris Nisi", lambda: print("Laboris Nisi"))
         self.help_menu.addAction("Ut Aliquip", lambda: print("Ut Aliquip"))
         self.help_menu.addAction("Ex Ea Commodo", lambda: print("Ex Ea Commodo"))
@@ -138,13 +150,16 @@ class MainWindow(QMainWindow):
 
 
     def declare_left_side_widgets(self):
+        self.left_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.left_layout, 0, 0)
+
         global_status_label = QLabel("Status: not connected")
         global_status_label.setStyleSheet("font-size: 30px;")
-        self.main_layout.addWidget(global_status_label,0,0)
+        self.left_layout.addWidget(global_status_label)
 
         rocket_trajectory_label = QLabel()
         rocket_trajectory_label.setScaledContents(True)
-        self.main_layout.addWidget(rocket_trajectory_label,2,0,2,1)
+        self.left_layout.addWidget(rocket_trajectory_label)
 
         rocket_trajectory_background = QPixmap(r"gui/resources/Professional_graphic.png")
         rocket_trajectory_label.setPixmap(rocket_trajectory_background)
@@ -158,33 +173,15 @@ class MainWindow(QMainWindow):
             f">{current_time}: System ready...")
         self.terminal_output.setStyleSheet(
             "font-size: 14px;")
-        self.main_layout.addWidget(self.terminal_output, 4, 0)
+        self.left_layout.addWidget(self.terminal_output)
 
 
     def declare_right_side_widgets(self):
-        self.hbox_kns = QHBoxLayout()
-        self.main_layout.addLayout(self.hbox_kns, 0, 2)
-
-        kns_logo_space = QLabel()
-        kns_logo_space.setFixedSize(50, 50)
-        kns_logo_space.setScaledContents(True)
-        self.hbox_kns.addWidget(kns_logo_space)
-
-        kns_logo = QPixmap(r"gui/resources/kns_logo.png")
-        kns_logo_space.setPixmap(kns_logo)
-
-        current_time = datetime.now().strftime("%H:%M:%S")
-        global_status_label = QLabel(f"Last received packet: {current_time}s")
-        global_status_label.setStyleSheet("font-size: 18px;")
-        self.hbox_kns.addWidget(global_status_label)
-
-        # global_status_label = QLabel(
-        #     "HORUS CSS | LOTUS ONE")
-        # global_status_label.setStyleSheet(
-        #     "color: white; font-size: 30px;")
-        # self.hbox_kns.addWidget(global_status_label)
 
         #------------------------
+        self.right_layout = QVBoxLayout()
+        self.main_layout.addLayout(self.right_layout, 0, 2)
+
         self.rec_bay_layout = QHBoxLayout()
         self.rec_bay_group = QGroupBox("Recovery bay status")
 
@@ -211,7 +208,7 @@ class MainWindow(QMainWindow):
         self.rec_bay_vbox.addWidget(self.rec_bay_press_label)
 
         self.rec_bay_group.setLayout(self.rec_bay_layout)
-        self.main_layout.addWidget(self.rec_bay_group, 2, 2)
+        self.right_layout.addWidget(self.rec_bay_group)
         #-------------------------
 
         self.lora_layout = QHBoxLayout()
@@ -240,7 +237,7 @@ class MainWindow(QMainWindow):
         self.lora_layout.addLayout(self.lora_hbox)
 
         self.lora_group.setLayout(self.lora_layout)
-        self.main_layout.addWidget(self.lora_group, 3, 2)
+        self.right_layout.addWidget(self.lora_group)
         # ------------------------
 
         self.gps_layout = QHBoxLayout()
@@ -263,7 +260,7 @@ class MainWindow(QMainWindow):
         self.gps_layout.addLayout(self.gps_hbox)
 
         self.gps_group.setLayout(self.gps_layout)
-        self.main_layout.addWidget(self.gps_group, 4, 2, 2,1)
+        self.right_layout.addWidget(self.gps_group)
 
     def generate_sample_data(self):
         base_time = datetime.now()
@@ -274,14 +271,13 @@ class MainWindow(QMainWindow):
 
 
     def define_separators(self):
-        upper_separator = QFrame()
-        upper_separator.setFrameShape(QFrame.Shape.HLine)
-        upper_separator.setFrameShadow(
-            QFrame.Shadow.Sunken)
-        upper_separator.setStyleSheet(
-            "color: white;")
-        self.main_layout.addWidget(upper_separator, 1, 0, 1, 3)
-
+        # upper_separator = QFrame()
+        # upper_separator.setFrameShape(QFrame.Shape.HLine)
+        # upper_separator.setFrameShadow(
+        #     QFrame.Shadow.Sunken)
+        # upper_separator.setStyleSheet(
+        #     "color: white;")
+        # self.main_layout.addWidget(upper_separator, 1, 0, 1, 3)
 
         vert_separator = QFrame()
         vert_separator.setFrameShape(QFrame.Shape.VLine)
@@ -289,7 +285,7 @@ class MainWindow(QMainWindow):
             QFrame.Shadow.Sunken)
         vert_separator.setStyleSheet(
             "color: white;")
-        self.main_layout.addWidget(vert_separator, 0, 1, 6, 1)
+        self.main_layout.addWidget(vert_separator, 0, 1, 3, 1)
 
     def apply_theme(self, theme_file):
         try:
@@ -316,6 +312,117 @@ class MainWindow(QMainWindow):
         """
 
         QMessageBox.about(self, "About HORUS-CSS", about_text)
+
+    def toggle_fullscreen(self):
+        if self.isFullScreen():
+            self.showNormal()
+        else:
+            self.showFullScreen()
+
+    def open_session_directory(self):
+        """Open the session directory in the system file explorer"""
+        import os
+        import platform
+        import subprocess
+        from PyQt6.QtWidgets import QMessageBox
+
+        session_path = self.csv_handler.session_dir
+
+        if not os.path.exists(session_path):
+            QMessageBox.warning(
+                self,
+                "Directory Not Found",
+                f"Session directory not found:\n{session_path}"
+            )
+            return
+
+        try:
+            if platform.system() == "Windows":
+                os.startfile(session_path)
+            elif platform.system() == "Darwin":
+                subprocess.Popen(["open", session_path])
+            else:
+                subprocess.Popen(["xdg-open", session_path])
+        except Exception as e:
+            self.logger.error(f"Error opening session directory: {str(e)}")
+            QMessageBox.critical(
+                self,
+                "Error Opening Directory",
+                f"Could not open session directory:\n{str(e)}"
+            )
+
+    def show_session_directory_path(self):
+        session_path = self.csv_handler.session_dir
+        QMessageBox.information(
+            self,
+            "Session Directory Path",
+            f"Current session files are stored at:\n{session_path}"
+        )
+
+    def toggle_heartbeat(self):
+        if hasattr(self, 'heartbeat_active') and self.heartbeat_active:
+            self.heartbeat_timer.stop()
+            self.heartbeat_placeholder.setStyleSheet("color: transparent; font-size: 14px;")
+            self.heartbeat_active = False
+        else:
+            self.heartbeat_timer.start(500)
+            self.heartbeat_active = True
+            self.blink_heartbeat()
+
+    def setup_heartbeat(self):
+        if not hasattr(self, 'heartbeat_timer'):
+            self.heartbeat_timer = QTimer()
+            self.heartbeat_timer.timeout.connect(self.blink_heartbeat)
+            self.heartbeat_state = True
+
+        self.heartbeat_active = True
+        self.heartbeat_timer.start(500)
+
+    def setup_status_bar(self):
+        self.status_logo = QLabel()
+        self.status_logo.setFixedSize(24, 24)
+        self.status_logo.setScaledContents(True)
+        logo_pixmap = QPixmap(r"gui/resources/kns_logo.png").scaled(24, 24)
+        self.status_logo.setPixmap(logo_pixmap)
+        self.statusBar().addWidget(self.status_logo)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.status_packet_label = QLabel(f"Last received packet: {current_time} s")
+        self.status_packet_label.setStyleSheet("font-size: 14px;")
+        self.statusBar().addWidget(self.status_packet_label)
+
+        self.statusBar().addWidget(QLabel(), 1)
+
+        self.status_title_label = QLabel("HORUS Communication & System Status Station  \t\t\t")
+        self.status_title_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        self.statusBar().addWidget(self.status_title_label)
+
+        self.statusBar().addWidget(QLabel(), 1)
+
+        self.heartbeat_placeholder = QLabel("●")
+        self.heartbeat_placeholder.setStyleSheet("color: transparent; font-size: 14px;")
+        self.statusBar().addPermanentWidget(self.heartbeat_placeholder)
+
+        self.setup_heartbeat()
+
+    def toggle_status_bar(self):
+        if self.status_bar_visible:
+            self.statusBar().hide()
+            self.status_bar_visible = False
+        else:
+            self.statusBar().show()
+            self.status_bar_visible = True
+
+    def update_status_packet_time(self):
+        if hasattr(self, 'status_packet_label'):
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.status_packet_label.setText(f"Last received packet: {current_time}s")
+
+    def blink_heartbeat(self):
+        if hasattr(self, 'heartbeat_active') and self.heartbeat_active:
+            self.heartbeat_state = not self.heartbeat_state
+            color = "red" if self.heartbeat_state else "transparent"
+            self.heartbeat_placeholder.setStyleSheet(f"color: {color}; font-size: 14px;")
 
     def handle_processed_data(self, data):
         pass
@@ -504,7 +611,10 @@ class MainWindow(QMainWindow):
         #     f"Jakość sygnału: {self.signal_quality} (SNR: {snr}, RSSI: {rssi})")
 
     def closeEvent(self, event):
-        """Zamykanie aplikacji"""
-        self.serial.stop_reading()
-        self.csv_handler.close_file()
+        if hasattr(self, "heartbeat_timer") and self.heartbeat_timer.isActive():
+            self.heartbeat_timer.stop()
+        if hasattr(self, "serial") and self.serial:
+            self.serial.stop_reading()
+        if hasattr(self, "csv_handler") and self.csv_handler:
+            self.csv_handler.close_file()
         super().closeEvent(event)
