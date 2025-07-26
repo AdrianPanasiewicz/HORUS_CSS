@@ -98,9 +98,10 @@ class MainWindow(QMainWindow):
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
-        self.help_menu = self.menu.addMenu("Help")
-        self.test_menu = self.menu.addMenu("Test")
         self.theme_menu = self.view_menu.addMenu("Themes")
+        self.test_menu = self.menu.addMenu("Test")
+        self.help_menu = self.menu.addMenu("Help")
+
 
         self.file_menu.addAction("Exit", self.close)
         self.file_menu.addAction("Open Session Directory", self.open_session_directory)

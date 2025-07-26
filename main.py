@@ -46,6 +46,8 @@ if __name__ == "__main__":
         os.environ["QT_QPA_PLATFORM"] = "windows"
     elif operational_system == 'Linux':
         os.environ["QT_QPA_PLATFORM"] = "xcb"
+    elif operational_system == 'Darwin':
+        os.environ["QT_QPA_PLATFORM"] = "cocoa"
     try:
         main()
     except Exception as e:
