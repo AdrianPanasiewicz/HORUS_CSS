@@ -9,6 +9,7 @@ from PyQt6.QtCore import QObject, pyqtSignal
 class SerialReader(QObject):
     telemetry_received = pyqtSignal(dict)
     transmission_info_received = pyqtSignal(dict)
+    connection_status_changed = pyqtSignal(bool)
 
     def __init__(self, port="COM7", baudrate=9600):
         super().__init__()
@@ -17,17 +18,32 @@ class SerialReader(QObject):
         self.baudrate = baudrate
         self.running = False
         self.thread = None
+        self.connected = False
 
+        self.connect_serial()
+
+    def connect_serial(self):
         try:
+            if hasattr(self, 'ser') and self.ser and self.ser.is_open:
+                self.ser.close()
+
             self.ser = serial.Serial(self.port, self.baudrate, timeout=0.5)
+            self.connected = True
             self.logger.info(f"Otworzono port {self.port} z baudrate {self.baudrate}")
+            self.connection_status_changed.emit(True)
         except serial.SerialException as e:
             self.ser = None
+            self.connected = False
             self.logger.error(f"Błąd otwierania portu {self.port}: {e}")
+            self.connection_status_changed.emit(False)
 
     def start_reading(self):
         if self.running:
             self.logger.debug("start_reading() wywołane, ale wątek już działa")
+            return
+            s
+        if not self.connected:
+            self.logger.warning("Próba uruchomienia odczytu bez połączenia")
             return
 
         self.running = True
@@ -163,3 +179,47 @@ class SerialReader(QObject):
             self.logger.info("Konfiguracja LoRa zakończona pomyślnie")
         except Exception as e:
             self.logger.error(f"Błąd podczas konfiguracji LoRa: {e}")
+
+    def set_baudrate(self, new_baudrate):
+        try:
+            self.logger.info(f"Zmiana baudrate na {new_baudrate}")
+
+            if self.running:
+                self.stop_reading()
+
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+
+            self.baudrate = new_baudrate
+            self.connect_serial()
+
+            if self.running:
+                self.start_reading()
+
+            return True
+        except Exception as e:
+            self.logger.error(f"Błąd zmiany baudrate: {e}")
+            return False
+
+    def reconnect(self):
+        try:
+            self.logger.info("Próba ponownego połączenia...")
+
+            if self.running:
+                self.stop_reading()
+
+            if self.ser and self.ser.is_open:
+                self.ser.close()
+
+            self.connect_serial()
+
+            if self.running:
+                self.start_reading()
+
+            return self.connected
+        except Exception as e:
+            self.logger.error(f"Błąd ponownego łączenia: {e}")
+            return False
+
+    def is_connected(self):
+        return self.connected and self.ser and self.ser.is_open
