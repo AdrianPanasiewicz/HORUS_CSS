@@ -1,158 +1,265 @@
 import numpy as np
 import pyqtgraph as pg
 from PyQt6.QtWidgets import QVBoxLayout, QWidget
+from PyQt6.QtGui import QColor, QPen
 from datetime import datetime
+
+from pyqtgraph.exporters import ImageExporter, SVGExporter
 
 
 class TimeSeriesPlot(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+	def __init__(self, timespan, parent=None):
+		super().__init__(parent)
 
-        self.plot_widget = pg.PlotWidget()
-        self.plot_widget.setBackground('k')
-        self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
-        self.plot_widget.setLabel('left', 'Value')
-        self.plot_widget.setLabel('bottom', 'Time')
+		self.plot_widget = pg.PlotWidget()
+		self.plot_widget.setBackground('k')
+		self.plot_widget.setLabel('left', 'Value')
+		self.plot_widget.setLabel('bottom', 'Time')
+		self.plot_widget.setAxisItems({'bottom': pg.DateAxisItem()})
+		self.plot_widget.setMouseEnabled(x=True, y=True)
+		self.plot_widget.setMenuEnabled(False)
+		self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
 
-        self.plot_widget.setMouseEnabled(x=True, y=True)
-        self.plot_widget.setMenuEnabled(False)
+		self.line_color = '#1f77b4'
+		self.line_style = 'Solid'
+		self.line_width = 2
+		self.data_markers_visible = True
+		self.grid_visible = True
+		self.legend_visible = True
 
-        self.curve = self.plot_widget.plot(
-            pen=pg.mkPen('y', width=2),
-            name='Data Stream'
-        )
+		self.curve = self.plot_widget.plot(
+			pen=self.create_pen(),
+			symbol='o' if self.data_markers_visible else None,
+			symbolSize=4,
+			symbolBrush=self.line_color,
+			name='Data Stream'
+		)
 
-        self.timestamps = np.array([], dtype=np.float64)
-        self.values = np.array([], dtype=np.float64)
+		if self.legend_visible:
+			self.plot_widget.addLegend()
 
-        self.min_time = None
-        self.max_time = None
-        self.min_value = float('inf')
-        self.max_value = float('-inf')
+		self.timestamps = np.array([], dtype=np.float64)
+		self.values = np.array([], dtype=np.float64)
 
-        layout = QVBoxLayout()
-        layout.addWidget(self.plot_widget)
-        self.setLayout(layout)
+		self.min_time = None
+		self.min_value = float('inf')
+		self.max_value = float('-inf')
+		self.timespan = timespan
 
-        self.crosshair_v = pg.InfiniteLine(angle=90,
-                                           movable=False)
-        self.crosshair_h = pg.InfiniteLine(angle=0,
-                                           movable=False)
-        self.plot_widget.addItem(self.crosshair_v,
-                                 ignoreBounds=True)
-        self.plot_widget.addItem(self.crosshair_h,
-                                 ignoreBounds=True)
+		layout = QVBoxLayout()
+		layout.addWidget(self.plot_widget)
+		self.setLayout(layout)
 
-        self.coord_label = pg.TextItem(anchor=(0, 1))
-        self.coord_label.setPos(
-            self.plot_widget.getAxis('bottom').range[0],
-            self.plot_widget.getAxis('left').range[1])
-        self.plot_widget.addItem(self.coord_label)
+		self.crosshair_visible = False
+		self.crosshair_v = pg.InfiniteLine(angle=90, movable=False,
+										   pen=pg.mkPen('w', width=1))
+		self.crosshair_h = pg.InfiniteLine(angle=0, movable=False,
+										   pen=pg.mkPen('w', width=1))
+		self.coord_label = pg.TextItem(anchor=(0, 1), color='w', fill=pg.mkColor(0, 0, 0, 150))
 
-        self.plot_widget.scene().sigMouseMoved.connect(
-            self.mouse_moved)
+		self.toggle_crosshair(False)
 
-    def set_x_label(self, label):
-        self.plot_widget.setLabel('bottom', label)
+		self.plot_widget.scene().sigMouseMoved.connect(self.mouse_moved)
 
-    def set_y_label(self, label):
-        self.plot_widget.setLabel('left', label)
+	def create_pen(self):
+		return pg.mkPen(
+			color=self.line_color,
+			width=self.line_width,
+		)
 
-    def add_point(self, timestamp, value):
+	def update_pen(self):
+		self.curve.setPen(self.create_pen())
+		if self.data_markers_visible:
+			self.curve.setSymbol('o')
+			self.curve.setSymbolSize(4)
+			self.curve.setSymbolBrush(self.line_color)
+		else:
+			self.curve.setSymbol(None)
 
-        if len(self.timestamps) >= 200:
-            self.timestamps = self.timestamps[1:]
-            self.values = self.values[1:]
+		self.plot_widget.showGrid(x=self.grid_visible, y=self.grid_visible, alpha=0.3)
 
-        if isinstance(timestamp, datetime):
-            ts = timestamp.timestamp()
-        elif isinstance(timestamp, float):
-            ts = timestamp
-        else:
-            ts = timestamp
+		if self.legend_visible:
+			self.plot_widget.addLegend()
+		else:
+			self.plot_widget.plotItem.legend.setParent(None)
+			self.plot_widget.plotItem.legend = None
 
-        self.timestamps = np.append(self.timestamps, ts)
-        self.values = np.append(self.values, value)
+	def update_timespan(self, timespan):
+		self.timespan = timespan
+		self.zoom_to_data()
 
-        if self.min_time is None or ts < self.min_time:
-            self.min_time = ts
-        if self.max_time is None or ts > self.max_time:
-            self.max_time = ts
-        if value < self.min_value:
-            self.min_value = value
-        if value > self.max_value:
-            self.max_value = value
+	def set_x_label(self, label):
+		self.plot_widget.setLabel('bottom', label)
 
-        self.update_plot()
+	def set_y_label(self, label):
+		self.plot_widget.setLabel('left', label)
 
-    def set_data(self, timestamps, values):
-        if isinstance(timestamps[0], datetime):
-            self.timestamps = np.array(
-                [t.timestamp() for t in timestamps])
-        else:
-            self.timestamps = np.array(timestamps)
+	def add_point(self, timestamp, value):
+		if isinstance(timestamp, datetime):
+			ts = timestamp.timestamp()
+		elif isinstance(timestamp, float):
+			ts = timestamp
+		else:
+			ts = timestamp
 
-        self.values = np.array(values)
+		self.timestamps = np.append(self.timestamps, ts)
+		self.values = np.append(self.values, value)
 
-        if len(self.timestamps) > 0:
-            self.min_time = np.min(self.timestamps)
-            self.max_time = np.max(self.timestamps)
-            self.min_value = np.min(self.values)
-            self.max_value = np.max(self.values)
-        else:
-            self.min_time = None
-            self.max_time = None
-            self.min_value = float('inf')
-            self.max_value = float('-inf')
+		if value < self.min_value:
+			self.min_value = value
+		if value > self.max_value:
+			self.max_value = value
 
-        self.update_plot()
+		if len(self.timestamps) > 1000:
+			self.timestamps = self.timestamps[-1000:]
+			self.values = self.values[-1000:]
 
-    def update_plot(self):
-        self.curve.setData(self.timestamps, self.values)
+		self.curve.setData(self.timestamps, self.values)
+		self.zoom_to_data()
 
-        if self.min_time is not None and self.max_time is not None:
-            time_span = self.max_time - self.min_time
-            padding = time_span * 0.05
+	def zoom_to_data(self):
+		if len(self.timestamps) == 0:
+			return
 
-            value_span = self.max_value - self.min_value
-            value_padding = value_span * 0.1 if value_span > 0 else abs(
-                self.min_value) * 0.1
+		current_time = datetime.now().timestamp()
+		min_time = current_time - self.timespan
+		max_time = current_time
 
-            self.plot_widget.setXRange(
-                self.min_time - padding,
-                self.max_time + padding,
-                padding=0
-            )
-            self.plot_widget.setYRange(
-                self.min_value - value_padding,
-                self.max_value + value_padding,
-                padding=0
-            )
+		visible_indices = (self.timestamps >= min_time) & (self.timestamps <= max_time)
+		visible_values = self.values[visible_indices]
 
-        self.plot_widget.setAxisItems(
-            {'bottom': pg.DateAxisItem()})
+		if len(visible_values) == 0:
+			return
 
-    def reset_view(self):
-        self.update_plot()
+		min_value = np.min(visible_values)
+		max_value = np.max(visible_values)
+		value_range = max_value - min_value
+		padding = value_range * 0.1 if value_range > 0 else 1.0
 
-    def mouse_moved(self, pos):
-        if self.plot_widget.sceneBoundingRect().contains(
-                pos):
-            mouse_point = self.plot_widget.plotItem.vb.mapSceneToView(
-                pos)
-            x_val = mouse_point.x()
-            y_val = mouse_point.y()
+		self.plot_widget.setXRange(min_time, max_time)
+		self.plot_widget.setYRange(min_value - padding, max_value + padding)
 
-            self.crosshair_v.setPos(x_val)
-            self.crosshair_h.setPos(y_val)
+	def set_data(self, timestamps, values):
+		if isinstance(timestamps[0], datetime):
+			self.timestamps = np.array([t.timestamp() for t in timestamps])
+		else:
+			self.timestamps = np.array(timestamps)
 
-            dt = datetime.fromtimestamp(x_val)
-            self.coord_label.setText(
-                f"Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}\nValue: {y_val:.4f}",
-                color='w'
-            )
+		self.values = np.array(values)
 
-    def clear_data(self):
-        self.timestamps = []
-        self.values = []
-        self.update_plot()
+		if len(self.timestamps) > 0:
+			self.min_time = np.min(self.timestamps)
+			self.max_value = np.max(self.values)
+			self.min_value = np.min(self.values)
+		else:
+			self.min_time = None
+			self.min_value = float('inf')
+			self.max_value = float('-inf')
+
+		self.curve.setData(self.timestamps, self.values)
+		self.zoom_to_data()
+
+	def update_plot(self):
+		self.curve.setData(self.timestamps, self.values)
+		self.zoom_to_data()
+
+	def reset_view(self):
+		if len(self.timestamps) == 0:
+			return
+
+		min_time = np.min(self.timestamps)
+		max_time = np.max(self.timestamps)
+		time_span = max_time - min_time
+		padding = time_span * 0.05
+
+		value_span = self.max_value - self.min_value
+		value_padding = value_span * 0.1 if value_span > 0 else abs(self.min_value) * 0.1
+
+		self.plot_widget.setXRange(min_time - padding, max_time + padding)
+		self.plot_widget.setYRange(self.min_value - value_padding, self.max_value + value_padding)
+
+	def mouse_moved(self, pos):
+		if not self.crosshair_visible:
+			return
+
+		if self.plot_widget.sceneBoundingRect().contains(pos):
+			mouse_point = self.plot_widget.plotItem.vb.mapSceneToView(pos)
+			x_val = mouse_point.x()
+			y_val = mouse_point.y()
+
+			self.crosshair_v.setPos(x_val)
+			self.crosshair_h.setPos(y_val)
+
+			if len(self.timestamps) > 0:
+				dt = datetime.fromtimestamp(x_val)
+				self.coord_label.setText(
+					f"Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}\nValue: {y_val:.4f}"
+				)
+				view_range = self.plot_widget.viewRange()
+				x_pos = view_range[0][0] + (view_range[0][1] - view_range[0][0]) * 0.01
+				y_pos = view_range[1][0] - (view_range[1][0] - view_range[1][1]) * 0.7
+				self.coord_label.setPos(x_pos, y_pos)
+
+	def toggle_crosshair(self, visible=None):
+		if visible is None:
+			self.crosshair_visible = not self.crosshair_visible
+		else:
+			self.crosshair_visible = visible
+
+		if self.crosshair_visible:
+			self.plot_widget.addItem(self.crosshair_v)
+			self.plot_widget.addItem(self.crosshair_h)
+			self.plot_widget.addItem(self.coord_label)
+		else:
+			self.plot_widget.removeItem(self.crosshair_v)
+			self.plot_widget.removeItem(self.crosshair_h)
+			self.plot_widget.removeItem(self.coord_label)
+
+	def clear_data(self):
+		self.timestamps = np.array([], dtype=np.float64)
+		self.values = np.array([], dtype=np.float64)
+		self.min_value = float('inf')
+		self.max_value = float('-inf')
+		self.curve.setData([], [])
+
+	def toggle_data_markers(self, visible):
+		self.data_markers_visible = visible
+		self.update_pen()
+
+	def set_line_color(self, color):
+		if isinstance(color, QColor):
+			self.line_color = color.name()
+		elif isinstance(color, str):
+			self.line_color = color
+		else:
+			self.line_color = '#1f77b4'
+
+		self.update_pen()
+
+	# def set_line_style(self, style):
+	# 	self.line_style = style
+	# 	self.update_pen()
+
+	def toggle_grid(self, visible):
+		self.grid_visible = visible
+		self.plot_widget.showGrid(x=visible, y=visible, alpha=0.3)
+
+	def toggle_legend(self, visible):
+		self.legend_visible = visible
+		if visible:
+			self.plot_widget.addLegend()
+		else:
+			self.plot_widget.plotItem.legend.setParent(None)
+			self.plot_widget.plotItem.legend = None
+
+	def export_to_png(self, filename):
+		exporter = ImageExporter(self.plot_widget.plotItem)
+		exporter.parameters()['width'] = 1920
+		exporter.export(filename)
+
+	def export_to_svg(self, filename):
+		exporter = SVGExporter(self.plot_widget.plotItem)
+		exporter.export(filename)
+
+	def get_data_values(self):
+		return self.values.copy()

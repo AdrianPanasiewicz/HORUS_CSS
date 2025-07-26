@@ -5,16 +5,17 @@ import numpy as np
 from PyQt6.QtCore import QTimer
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QWidget, QVBoxLayout,
-                             QHBoxLayout,
+                             QHBoxLayout, QColorDialog,
                              QHBoxLayout, QLabel,
                              QPushButton, QGridLayout,
                              QGridLayout, QVBoxLayout,
-                             QFrame, QTextBrowser,
-                             QSizePolicy, QGroupBox, QMessageBox)
+                             QFrame, QTextBrowser, QDialogButtonBox,
+                             QSizePolicy, QGroupBox, QMessageBox,
+                             QInputDialog, QDialog)
 from gui.time_series_plot import TimeSeriesPlot
 from datetime import datetime, timedelta
-from PyQt6.QtSvgWidgets import QSvgWidget
-from PyQt6.QtGui import QIcon, QPixmap
+from serial.tools import list_ports
+from PyQt6.QtGui import QIcon, QPixmap, QColor
 from core.serial_reader import SerialReader
 from core.process_data import ProcessData
 from core.csv_handler import CsvHandler
@@ -28,9 +29,10 @@ class MainWindow(QMainWindow):
         self.define_separators()
         self.setup_status_bar()
 
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
-            timestamps, values = self.generate_sample_data()
-            plot.set_data(timestamps, values)
+        # for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+        #     timestamps, values = self.generate_sample_data()
+        #     plot.set_data(timestamps, values)
+        # self.clear_plots()
 
         self.serial.start_reading()
 
@@ -47,6 +49,8 @@ class MainWindow(QMainWindow):
         self.processor = ProcessData()
         self.logger.info(
             f"Singleton ProcessData zainicjalizowany")
+
+        self.default_timespan = 30
 
         if config['lora_config']:
             self.serial.LoraSet(config['lora_config'], config['is_config_selected'])
@@ -82,7 +86,6 @@ class MainWindow(QMainWindow):
         self.setWindowIcon(QIcon(r'gui/resources/black_icon.png'))
         self.setStyleSheet(open(r'gui/resources/themes/dark_blue.qss').read())
         self.resize(1800, 900)
-        # self.showFullScreen()
         self.declare_layout()
         self.declare_left_side_widgets()
         self.declare_right_side_widgets()
@@ -99,17 +102,28 @@ class MainWindow(QMainWindow):
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
         self.theme_menu = self.view_menu.addMenu("Themes")
+        self.timespan_menu = self.view_menu.addMenu("Timespan")
+        self.tools_menu = self.menu.addMenu("Tools")
         self.test_menu = self.menu.addMenu("Test")
         self.help_menu = self.menu.addMenu("Help")
-
 
         self.file_menu.addAction("Exit", self.close)
         self.file_menu.addAction("Open Session Directory", self.open_session_directory)
         self.file_menu.addAction("Show Session Path", self.show_session_directory_path)
+        self.file_menu.addSeparator()
+        self.file_menu.addAction("Save Terminal Log", self.save_terminal_log)
+        self.file_menu.addAction("Export Plots as PNG", lambda: self.export_plots("png"))
+        self.file_menu.addAction("Export Plots as SVG", lambda: self.export_plots("svg"))
 
         self.view_menu.addAction("Toggle Fullscreen", self.toggle_fullscreen)
         self.view_menu.addAction("Toggle Status Bar", self.toggle_status_bar)
         self.view_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
+        self.view_menu.addSeparator()
+        self.view_menu.addAction("Toggle Crosshair", self.toggle_crosshairs)
+        self.view_menu.addAction("Toggle Data Point Markers", self.toggle_data_markers)
+        self.view_menu.addAction("Change Line Colors", self.change_line_colors)
+        self.view_menu.addAction("Toggle Grid", self.toggle_plot_grid)
+        # self.view_menu.addAction("Toggle Legends", self.toggle_plot_legends)
         self.view_menu.addSeparator()
         self.view_menu.addAction("Clear Terminal", self.clear_terminal)
         self.view_menu.addAction("Clear Plots", self.clear_plots)
@@ -137,6 +151,20 @@ class MainWindow(QMainWindow):
             action = self.theme_menu.addAction(theme_name)
             action.triggered.connect(lambda _, t=theme_file: self.apply_theme(t))
             self.theme_actions[theme_name] = action
+
+        self.timespan_menu.addAction("30 seconds", lambda: self.change_plot_timespans(30))
+        self.timespan_menu.addAction("60 seconds", lambda: self.change_plot_timespans(60))
+        self.timespan_menu.addAction("90 seconds", lambda: self.change_plot_timespans(90))
+        self.timespan_menu.addAction("120 seconds", lambda: self.change_plot_timespans(120))
+
+        serial_menu = self.tools_menu.addMenu("Serial Configuration")
+        serial_menu.addAction("Scan Ports", self.scan_serial_ports)
+        serial_menu.addAction("Change Baud Rate", self.change_baud_rate)
+        serial_menu.addAction("Reconnect Serial", self.reconnect_serial)
+        self.tools_menu.addAction("Configure Filters", self.configure_filters)
+        self.tools_menu.addSeparator()
+        self.tools_menu.addAction("Calculate Statistics", self.calculate_statistics)
+
 
     def declare_left_side_widgets(self):
         self.left_layout = QVBoxLayout()
@@ -174,21 +202,21 @@ class MainWindow(QMainWindow):
         self.rec_bay_layout = QHBoxLayout()
         self.rec_bay_group = QGroupBox("Recovery bay status")
 
-        self.time_pres_plot = TimeSeriesPlot()
+        self.time_pres_plot = TimeSeriesPlot(self.default_timespan)
         self.time_pres_plot.set_x_label("Time [s]")
         self.time_pres_plot.set_y_label("Temp [°C]")
 
-        base_time = datetime.now()
-        timestamps = [base_time + timedelta(minutes=i) for i
-                      in range(60)]
-        values = np.random.normal(50, 10, 60).tolist()
+        # base_time = datetime.now()
+        # timestamps = [base_time + timedelta(minutes=i) for i
+        #               in range(60)]
+        # values = np.random.normal(50, 10, 60).tolist()
 
-        self.time_pres_plot.set_data(timestamps, values)
+        # self.time_pres_plot.set_data(timestamps, values)
 
         self.rec_bay_hbox = QHBoxLayout()
-        self.rec_bay_hbox.addWidget(self.time_pres_plot)
+        self.rec_bay_hbox.addWidget(self.time_pres_plot,4)
         self.rec_bay_vbox = QVBoxLayout()
-        self.rec_bay_hbox.addLayout(self.rec_bay_vbox)
+        self.rec_bay_hbox.addLayout(self.rec_bay_vbox,1)
         self.rec_bay_layout.addLayout(self.rec_bay_hbox)
 
         self.rec_bay_temp_label = QLabel(f"Temperature: 0°C")
@@ -203,18 +231,18 @@ class MainWindow(QMainWindow):
         self.lora_layout = QHBoxLayout()
         self.lora_group = QGroupBox("LoRa signal status")
 
-        self.lora_snr_plot = TimeSeriesPlot()
+        self.lora_snr_plot = TimeSeriesPlot(self.default_timespan)
         self.lora_snr_plot.set_x_label("Time [s]")
         self.lora_snr_plot.set_y_label("SNR [dB]")
 
-        base_time = datetime.now()
-        timestamps = [base_time + timedelta(minutes=i) for i
-                      in range(120)]
-        values = np.random.normal(2, 0.01, 120).tolist()
-        self.lora_snr_plot.set_data(timestamps, values)
+        # base_time = datetime.now()
+        # timestamps = [base_time + timedelta(minutes=i) for i
+        #               in range(120)]
+        # values = np.random.normal(2, 0.01, 120).tolist()
+        # self.lora_snr_plot.set_data(timestamps, values)
 
         self.lora_hbox = QHBoxLayout()
-        self.lora_hbox.addWidget(self.lora_snr_plot)
+        self.lora_hbox.addWidget(self.lora_snr_plot,4)
 
         self.lora_vbox = QVBoxLayout()
         self.lora_snr_label = QLabel("SNR: 0 dB")
@@ -222,7 +250,7 @@ class MainWindow(QMainWindow):
         self.lora_vbox.addWidget(self.lora_snr_label)
         self.lora_vbox.addWidget(self.lora_freq_label)
 
-        self.lora_hbox.addLayout(self.lora_vbox)
+        self.lora_hbox.addLayout(self.lora_vbox,1)
         self.lora_layout.addLayout(self.lora_hbox)
 
         self.lora_group.setLayout(self.lora_layout)
@@ -232,12 +260,12 @@ class MainWindow(QMainWindow):
         self.gps_layout = QHBoxLayout()
         self.gps_group = QGroupBox("GPS signal status")
 
-        self.gps_snr_plot = TimeSeriesPlot()
+        self.gps_snr_plot = TimeSeriesPlot(self.default_timespan)
         self.gps_snr_plot.set_x_label("Time [s]")
         self.gps_snr_plot.set_y_label("SNR [dB]")
 
         self.gps_hbox = QHBoxLayout()
-        self.gps_hbox.addWidget(self.gps_snr_plot)
+        self.gps_hbox.addWidget(self.gps_snr_plot,4)
 
         self.gps_vbox = QVBoxLayout()
         self.gps_snr_label = QLabel("SNR: 0 dB")
@@ -245,7 +273,7 @@ class MainWindow(QMainWindow):
         self.gps_vbox.addWidget(self.gps_snr_label)
         self.gps_vbox.addWidget(self.gps_sat_label)
 
-        self.gps_hbox.addLayout(self.gps_vbox)
+        self.gps_hbox.addLayout(self.gps_vbox,1)
         self.gps_layout.addLayout(self.gps_hbox)
 
         self.gps_group.setLayout(self.gps_layout)
@@ -545,6 +573,255 @@ class MainWindow(QMainWindow):
     def clear_all(self):
         self.clear_plots()
         self.clear_terminal()
+
+    def change_plot_timespans(self, timespan):
+        self.time_pres_plot.update_timespan(timespan)
+        self.lora_snr_plot.update_timespan(timespan)
+        self.gps_snr_plot.update_timespan(timespan)
+
+    def toggle_crosshairs(self):
+        current_state = self.time_pres_plot.crosshair_visible
+
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_crosshair(not current_state)
+
+    def save_terminal_log(self):
+        path = os.path.join(self.csv_handler.session_dir, "terminal_log.txt")
+        try:
+            with open(path, 'w') as f:
+                f.write(self.terminal_output.toPlainText())
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(f">{current_time}: Log saved to {path}")
+            self.logger.info(f"Terminal log saved to {path}")
+        except Exception as e:
+            QMessageBox.critical(self, "Save Error", f"Failed to save log: {str(e)}")
+
+    def export_plots(self, format):
+        try:
+            session_dir = self.csv_handler.session_dir
+            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+            plots = {
+                "pressure": self.time_pres_plot,
+                "lora": self.lora_snr_plot,
+                "gps": self.gps_snr_plot
+            }
+
+            for name, plot in plots.items():
+                filename = os.path.join(session_dir, f"{name}_plot_{timestamp}.{format}")
+                if format == "png":
+                    plot.export_to_png(filename)
+                elif format == "svg":
+                    plot.export_to_svg(filename)
+
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: lightgreen;'>Exported plots as {format.upper()} files</span>")
+            self.logger.info(f"Exported plots as {format.upper()} files")
+        except Exception as e:
+            self.logger.error(f"Error exporting plots: {str(e)}")
+            QMessageBox.critical(self, "Export Error", f"Failed to export plots: {str(e)}")
+
+    def toggle_data_markers(self):
+        state = not self.time_pres_plot.data_markers_visible
+
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_data_markers(state)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Data markers turned {status}</span>")
+        self.logger.info(f"Data markers toggled to {status}")
+
+    def change_line_colors(self):
+        current_color = self.time_pres_plot.line_color
+
+        current_qcolor = QColor(current_color)
+        color = QColorDialog.getColor(current_qcolor, self, "Select Line Color")
+        if color.isValid():
+            for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+                plot.set_line_color(color)
+
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: {color.name()};'>Plot line color changed</span>")
+            self.logger.info(f"Plot line color changed to {color.name()}")
+
+    # def change_line_styles(self):
+    #     styles = ["Solid", "Dashed", "Dotted", "Dash-Dot"]
+    #     current_style = self.time_pres_plot.line_style
+    #
+    #     choice, ok = QInputDialog.getItem(
+    #         self, "Select Line Style", "Choose a line style:",
+    #         styles, styles.index(current_style), False
+    #     )
+    #
+    #     if ok and choice:
+    #         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+    #             plot.set_line_style(choice)
+    #
+    #         current_time = datetime.now().strftime("%H:%M:%S")
+    #         self.terminal_output.append(
+    #             f">{current_time}: <span style='color: lightblue;'>Line style changed to {choice}</span>")
+    #         self.logger.info(f"Line style changed to {choice}")
+
+    def toggle_plot_grid(self):
+        state = not self.time_pres_plot.grid_visible
+
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_grid(state)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Plot grid turned {status}</span>")
+        self.logger.info(f"Plot grid toggled to {status}")
+
+    def toggle_plot_legends(self):
+        state = not self.time_pres_plot.legend_visible
+
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_legend(state)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Plot legends turned {status}</span>")
+        self.logger.info(f"Plot legends toggled to {status}")
+
+    def scan_serial_ports(self):
+        try:
+            ports = [port.device for port in list_ports.comports()]
+            current_time = datetime.now().strftime("%H:%M:%S")
+
+            if not ports:
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: orange;'>No serial ports found</span>")
+                return
+
+            message = "<span style='color: lightgreen;'>Available ports:</span><br>"
+            message += "<br>".join([f"&nbsp;&nbsp;• {port}" for port in ports])
+
+            self.terminal_output.append(f">{current_time}: {message}")
+            self.logger.info(f"Scanned serial ports: {ports}")
+        except Exception as e:
+            self.logger.error(f"Error scanning serial ports: {str(e)}")
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: red;'>Error scanning ports: {str(e)}</span>")
+
+    def change_baud_rate(self):
+
+        current_baud = self.serial.baudrate
+        baud_rates = ["9600", "19200", "38400", "57600", "115200"]
+
+        choice, ok = QInputDialog.getItem(
+            self, "Select Baud Rate", "Choose a baud rate:",
+            baud_rates, baud_rates.index(str(current_baud)), False
+        )
+
+        if ok and choice:
+            try:
+                new_baud = int(choice)
+                self.serial.set_baudrate(new_baud)
+
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: lightgreen;'>Baud rate changed to {new_baud}</span>")
+                self.logger.info(f"Baud rate changed to {new_baud}")
+            except Exception as e:
+                self.logger.error(f"Error changing baud rate: {str(e)}")
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: red;'>Error changing baud rate: {str(e)}</span>")
+
+    def reconnect_serial(self):
+        try:
+            self.serial.reconnect()
+            current_time = datetime.now().strftime("%H:%M:%S")
+
+            if self.serial.is_connected():
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: lightgreen;'>Serial reconnected successfully</span>")
+                self.logger.info("Serial reconnected successfully")
+            else:
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: orange;'>Serial reconnection failed</span>")
+                self.logger.warning("Serial reconnection failed")
+        except Exception as e:
+            self.logger.error(f"Error reconnecting serial: {str(e)}")
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: red;'>Error reconnecting serial: {str(e)}</span>")
+
+    def configure_filters(self):
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: yellow;'>Filter configuration opened</span>")
+
+        # Placeholder for actual implementation
+        QMessageBox.information(
+            self,
+            "Configure Filters",
+            "This feature is under development. It will allow you to configure "
+            "data filtering algorithms for noise reduction."
+        )
+
+    def calculate_statistics(self):
+        """Calculate and display statistics for plot data"""
+        try:
+            stats = []
+
+            # Calculate for each plot
+            plots = {
+                "Pressure/Temperature": self.time_pres_plot,
+                "LoRa SNR": self.lora_snr_plot,
+                "GPS SNR": self.gps_snr_plot
+            }
+
+            for name, plot in plots.items():
+                if plot.values.any():
+                    values = np.array(plot.values)
+                    stats.append(f"<b>{name}:</b>")
+                    stats.append(f"  Min: {np.min(values):.2f}")
+                    stats.append(f"  Max: {np.max(values):.2f}")
+                    stats.append(f"  Mean: {np.mean(values):.2f}")
+                    stats.append(f"  Std Dev: {np.std(values):.2f}")
+                    stats.append("")
+
+            if not stats:
+                raise ValueError("No data available for statistics")
+
+            stats_html = "<br>".join(stats)
+
+            # Show in dialog
+            dialog = QDialog(self)
+            dialog.setWindowTitle("Data Statistics")
+            dialog.resize(200, 400)
+            layout = QVBoxLayout()
+
+            text_browser = QTextBrowser()
+            text_browser.setHtml(stats_html)
+            layout.addWidget(text_browser)
+
+            button_box = QDialogButtonBox(QDialogButtonBox.StandardButton.Ok)
+            button_box.accepted.connect(dialog.accept)
+            layout.addWidget(button_box)
+
+            dialog.setLayout(layout)
+            dialog.exec()
+
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: lightgreen;'>Calculated data statistics</span>")
+            self.logger.info("Calculated data statistics")
+
+        except Exception as e:
+            self.logger.error(f"Error calculating statistics: {str(e)}")
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: red;'>Error calculating statistics: {str(e)}</span>")
 
     def handle_processed_data(self, data):
         pass
