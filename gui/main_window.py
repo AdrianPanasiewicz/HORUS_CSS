@@ -11,6 +11,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QSizePolicy, QGroupBox)
 from gui.time_series_plot import TimeSeriesPlot
 from datetime import datetime, timedelta
+from PyQt6.QtSvgWidgets import QSvgWidget
 from PyQt6.QtGui import QIcon, QPixmap
 from core.serial_reader import SerialReader
 from core.process_data import ProcessData
@@ -76,7 +77,7 @@ class MainWindow(QMainWindow):
     def initalizeUI(self):
         self.setWindowTitle("HORUS-CSS")
         self.setWindowIcon(QIcon(r'gui/resources/black_icon.png'))
-        self.setStyleSheet(open(r'gui/resources/darkstyle.qss').read())
+        self.setStyleSheet(open(r'gui/resources/themes/dark_blue.qss').read())
         self.resize(1800, 900)
         # self.showFullScreen()
         self.declare_layout()
@@ -99,7 +100,25 @@ class MainWindow(QMainWindow):
         self.view_menu = self.menu.addMenu("View")
         self.option_menu = self.menu.addMenu("Options")
         self.help_menu = self.menu.addMenu("Help")
-        exit_action = self.file_menu.addAction("Exit", self.close)
+
+
+        self.file_menu.addAction("Exit", self.close)
+        self.file_menu.addAction("Consectetur", lambda: print("Consectetur"))
+        self.file_menu.addAction("Tempor Incididunt", lambda: print("Tempor Incididunt"))
+        self.file_menu.addAction("Ut Labore", lambda: print("Ut Labore"))
+
+        self.view_menu.addAction("Magna Aliqua", lambda: print("Magna Aliqua"))
+        self.view_menu.addAction("Ut Enim", lambda: print("Ut Enim"))
+        self.view_menu.addAction("Minim Veniam", lambda: print("Minim Veniam"))
+
+        self.option_menu.addAction("Quis Nostrud", lambda: print("Quis Nostrud"))
+        self.option_menu.addAction("Exercitation", lambda: print("Exercitation"))
+        self.option_menu.addAction("Ullamco", lambda: print("Ullamco"))
+
+        self.help_menu.addAction("Laboris Nisi", lambda: print("Laboris Nisi"))
+        self.help_menu.addAction("Ut Aliquip", lambda: print("Ut Aliquip"))
+        self.help_menu.addAction("Ex Ea Commodo", lambda: print("Ex Ea Commodo"))
+
 
     def declare_left_side_widgets(self):
         global_status_label = QLabel("Status: not connected")
