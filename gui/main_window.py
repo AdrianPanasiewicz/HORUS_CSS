@@ -7,7 +7,6 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QWidget, QVBoxLayout,
                              QHBoxLayout, QColorDialog,
                              QHBoxLayout, QLabel,
-                             QPushButton, QGridLayout,
                              QGridLayout, QVBoxLayout,
                              QFrame, QTextBrowser, QDialogButtonBox,
                              QSizePolicy, QGroupBox, QMessageBox,
@@ -28,12 +27,6 @@ class MainWindow(QMainWindow):
         self.initalizeUI()
         self.define_separators()
         self.setup_status_bar()
-
-        # for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
-        #     timestamps, values = self.generate_sample_data()
-        #     plot.set_data(timestamps, values)
-        # self.clear_plots()
-
         self.serial.start_reading()
 
     def connect_gui_to_backend(self, config):
@@ -91,7 +84,7 @@ class MainWindow(QMainWindow):
         self.declare_layout()
         self.declare_left_side_widgets()
         self.declare_right_side_widgets()
-        self.declare_menu()
+        self.declare_menus()
 
     def declare_layout(self):
         self.central = QWidget()
@@ -99,7 +92,7 @@ class MainWindow(QMainWindow):
         self.main_layout = QGridLayout()
         self.central.setLayout(self.main_layout)
 
-    def declare_menu(self):
+    def declare_menus(self):
         self.menu = self.menuBar()
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
@@ -118,14 +111,45 @@ class MainWindow(QMainWindow):
         self.file_menu.addAction("Export Plots as SVG", lambda: self.export_plots("svg"))
 
         self.view_menu.addAction("Toggle Fullscreen", self.toggle_fullscreen)
-        self.view_menu.addAction("Toggle Status Bar", self.toggle_status_bar)
-        self.view_menu.addAction("Toggle Heartbeat", self.toggle_heartbeat)
+
+        self.status_bar_action = self.view_menu.addAction("Status Bar")
+        self.status_bar_action.setCheckable(True)
+        self.status_bar_action.setChecked(True)
+        self.status_bar_action.triggered.connect(self.toggle_status_bar)
+
+        self.heartbeat_action = self.view_menu.addAction("Heartbeat")
+        self.heartbeat_action.setCheckable(True)
+        self.heartbeat_action.setChecked(True)
+        self.heartbeat_action.triggered.connect(self.toggle_heartbeat)
+
         self.view_menu.addSeparator()
-        self.view_menu.addAction("Toggle Crosshair", self.toggle_crosshairs)
-        self.view_menu.addAction("Toggle Data Point Markers", self.toggle_data_markers)
-        self.view_menu.addAction("Change Line Colors", self.change_line_colors)
-        self.view_menu.addAction("Toggle Grid", self.toggle_plot_grid)
-        # self.view_menu.addAction("Toggle Legends", self.toggle_plot_legends)
+
+        self.crosshair_action = self.view_menu.addAction("Crosshair")
+        self.crosshair_action.setCheckable(True)
+        self.crosshair_action.setChecked(False)
+        self.crosshair_action.triggered.connect(self.toggle_crosshairs)
+
+        self.auto_zoom_action = self.view_menu.addAction("Auto-Zoom")
+        self.auto_zoom_action.setCheckable(True)
+        self.auto_zoom_action.setChecked(True)
+        self.auto_zoom_action.triggered.connect(self.toggle_auto_zoom)
+
+        self.data_markers_action = self.view_menu.addAction("Data Markers")
+        self.data_markers_action.setCheckable(True)
+        self.data_markers_action.setChecked(True)
+        self.data_markers_action.triggered.connect(self.toggle_data_markers)
+
+        self.grid_action = self.view_menu.addAction("Grid")
+        self.grid_action.setCheckable(True)
+        self.grid_action.setChecked(True)
+        self.grid_action.triggered.connect(self.toggle_plot_grid)
+
+        self.legend_action = self.view_menu.addAction("Legends")
+        self.legend_action.setCheckable(True)
+        self.legend_action.setChecked(True)
+        self.legend_action.triggered.connect(self.toggle_plot_legends)
+
+
         self.view_menu.addSeparator()
         self.view_menu.addAction("Clear Terminal", self.clear_terminal)
         self.view_menu.addAction("Clear Plots", self.clear_plots)
@@ -514,14 +538,31 @@ class MainWindow(QMainWindow):
         )
 
     def toggle_heartbeat(self):
-        if hasattr(self, 'heartbeat_active') and self.heartbeat_active:
+        state = self.heartbeat_action.isChecked()
+        if state:
+            self.heartbeat_timer.start(500)
+            self.heartbeat_active = True
+        else:
             self.heartbeat_timer.stop()
             self.heartbeat_placeholder.setStyleSheet("color: transparent; font-size: 14px;")
             self.heartbeat_active = False
-        else:
-            self.heartbeat_timer.start(500)
-            self.heartbeat_active = True
-            self.blink_heartbeat()
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Heartbeat turned {status}</span>")
+        self.logger.info(f"Heartbeat toggled to {status}")
+
+    def toggle_crosshairs(self):
+        state = self.crosshair_action.isChecked()
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_crosshair(state)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Crosshair turned {status}</span>")
+        self.logger.info(f"Crosshair toggled to {status}")
 
     def setup_heartbeat(self):
         if not hasattr(self, 'heartbeat_timer'):
@@ -561,12 +602,18 @@ class MainWindow(QMainWindow):
         self.setup_heartbeat()
 
     def toggle_status_bar(self):
-        if self.status_bar_visible:
-            self.statusBar().hide()
-            self.status_bar_visible = False
-        else:
+        state = self.status_bar_action.isChecked()
+        if state:
             self.statusBar().show()
-            self.status_bar_visible = True
+        else:
+            self.statusBar().hide()
+        self.status_bar_visible = state
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Status bar turned {status}</span>")
+        self.logger.info(f"Status bar toggled to {status}")
 
     def update_status_packet_time(self):
         if hasattr(self, 'status_packet_label'):
@@ -708,12 +755,6 @@ class MainWindow(QMainWindow):
         self.lora_snr_plot.update_timespan(timespan)
         self.gps_snr_plot.update_timespan(timespan)
 
-    def toggle_crosshairs(self):
-        current_state = self.time_pres_plot.crosshair_visible
-
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
-            plot.toggle_crosshair(not current_state)
-
     def save_terminal_log(self):
         path = os.path.join(self.csv_handler.session_dir, "terminal_log.txt")
         try:
@@ -752,8 +793,7 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Export Error", f"Failed to export plots: {str(e)}")
 
     def toggle_data_markers(self):
-        state = not self.time_pres_plot.data_markers_visible
-
+        state = self.data_markers_action.isChecked()
         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
             plot.toggle_data_markers(state)
 
@@ -777,27 +817,9 @@ class MainWindow(QMainWindow):
                 f">{current_time}: <span style='color: {color.name()};'>Plot line color changed</span>")
             self.logger.info(f"Plot line color changed to {color.name()}")
 
-    # def change_line_styles(self):
-    #     styles = ["Solid", "Dashed", "Dotted", "Dash-Dot"]
-    #     current_style = self.time_pres_plot.line_style
-    #
-    #     choice, ok = QInputDialog.getItem(
-    #         self, "Select Line Style", "Choose a line style:",
-    #         styles, styles.index(current_style), False
-    #     )
-    #
-    #     if ok and choice:
-    #         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
-    #             plot.set_line_style(choice)
-    #
-    #         current_time = datetime.now().strftime("%H:%M:%S")
-    #         self.terminal_output.append(
-    #             f">{current_time}: <span style='color: lightblue;'>Line style changed to {choice}</span>")
-    #         self.logger.info(f"Line style changed to {choice}")
 
     def toggle_plot_grid(self):
-        state = not self.time_pres_plot.grid_visible
-
+        state = self.grid_action.isChecked()
         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
             plot.toggle_grid(state)
 
@@ -808,8 +830,7 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Plot grid toggled to {status}")
 
     def toggle_plot_legends(self):
-        state = not self.time_pres_plot.legend_visible
-
+        state = self.legend_action.isChecked()
         for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
             plot.toggle_legend(state)
 
@@ -896,6 +917,17 @@ class MainWindow(QMainWindow):
             "This feature is under development. It will allow you to configure "
             "data filtering algorithms for noise reduction."
         )
+
+    def toggle_auto_zoom(self):
+        state = self.auto_zoom_action.isChecked()
+        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            plot.toggle_auto_zoom(state)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        status = "ON" if state else "OFF"
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: lightblue;'>Auto-zoom turned {status}</span>")
+        self.logger.info(f"Auto-zoom toggled to {status}")
 
     def calculate_statistics(self):
         """Calculate and display statistics for plot data"""

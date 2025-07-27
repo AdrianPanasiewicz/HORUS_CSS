@@ -26,6 +26,7 @@ class TimeSeriesPlot(QWidget):
 		self.data_markers_visible = True
 		self.grid_visible = True
 		self.legend_visible = True
+		self.auto_zoom_enabled = True
 
 		self.curve = self.plot_widget.plot(
 			pen=self.create_pen(),
@@ -115,7 +116,8 @@ class TimeSeriesPlot(QWidget):
 			self.values = self.values[-1000:]
 
 		self.curve.setData(self.timestamps, self.values)
-		self.zoom_to_data()
+		if self.auto_zoom_enabled:
+			self.zoom_to_data()
 
 	def zoom_to_data(self):
 		if len(self.timestamps) == 0:
@@ -138,6 +140,12 @@ class TimeSeriesPlot(QWidget):
 
 		self.plot_widget.setXRange(min_time, max_time)
 		self.plot_widget.setYRange(min_value - padding, max_value + padding)
+
+	def toggle_auto_zoom(self, enable=None):
+		if enable is None:
+			self.auto_zoom_enabled = not self.auto_zoom_enabled
+		else:
+			self.auto_zoom_enabled = enable
 
 	def set_data(self, timestamps, values):
 		if isinstance(timestamps[0], datetime):
@@ -192,8 +200,9 @@ class TimeSeriesPlot(QWidget):
 
 			if len(self.timestamps) > 0:
 				dt = datetime.fromtimestamp(x_val)
+				ms = int(dt.microsecond / 1000)
 				self.coord_label.setText(
-					f"Time: {dt.strftime('%Y-%m-%d %H:%M:%S')}\nValue: {y_val:.4f}"
+					f"Time: {dt.strftime('%H:%M:%S')}.{ms:03d}\nValue: {y_val:.4f}"
 				)
 				view_range = self.plot_widget.viewRange()
 				x_pos = view_range[0][0] + (view_range[0][1] - view_range[0][0]) * 0.01
