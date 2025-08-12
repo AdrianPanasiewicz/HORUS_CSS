@@ -61,6 +61,11 @@ class MainWindow(QMainWindow):
         self.landing_detection = False
         self.engine_detection = False
 
+        # Debug variables - to be removed
+        self.current_status_index = 1
+        self.status_cycle_timer = QTimer()
+        self.status_cycling_active = False
+
         self.current_data = {
             'velocity': 0.0,
             'altitude': 0.0,
@@ -163,6 +168,10 @@ class MainWindow(QMainWindow):
         self.test_menu.addSeparator()
         self.test_menu.addAction("Start Plot Simulation", self.start_plot_simulation)
         self.test_menu.addAction("Stop Plot Simulation", self.stop_plot_simulation)
+        self.plot_speed_menu = self.test_menu.addMenu("Plot Simulation Speed")
+        self.test_menu.addSeparator()
+        self.test_menu.addAction("Start Status Image Cycling", self.start_status_cycling)
+        self.test_menu.addAction("Stop Status Image Cycling", self.stop_status_cycling)
 
         self.themes = {
             "Dark Blue": "dark_blue.qss",
@@ -191,7 +200,7 @@ class MainWindow(QMainWindow):
         self.tools_menu.addSeparator()
         self.tools_menu.addAction("Calculate Statistics", self.calculate_statistics)
 
-        self.plot_speed_menu = self.test_menu.addMenu("Plot Simulation Speed")
+
         self.plot_speed_actions = {}
 
         speeds = {
@@ -230,15 +239,16 @@ class MainWindow(QMainWindow):
 
         self.left_layout.addLayout(status_wrapper)
 
-        rocket_trajectory_label = QLabel()
-        rocket_trajectory_label.setScaledContents(True)
-        self.left_layout.addWidget(rocket_trajectory_label)
+        self.rocket_trajectory_label = QLabel()
+        self.rocket_trajectory_label.setScaledContents(True)
+        self.left_layout.addWidget(self.rocket_trajectory_label)
 
-        rocket_trajectory_background = QPixmap(r"gui/resources/Professional_graphic.png")
-        rocket_trajectory_label.setPixmap(rocket_trajectory_background)
-        rocket_trajectory_label.setMinimumSize(200, 160)
-        rocket_trajectory_label.setSizePolicy(
-            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
+        scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
+                                      Qt.TransformationMode.SmoothTransformation)
+        self.rocket_trajectory_label.setPixmap(scaled_pixmap)
+        # rocket_trajectory_label.setSizePolicy(
+        #     QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.terminal_output = QTextBrowser()
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -983,6 +993,47 @@ class MainWindow(QMainWindow):
             current_time = datetime.now().strftime("%H:%M:%S")
             self.terminal_output.append(
                 f">{current_time}: <span style='color: red;'>Error calculating statistics: {str(e)}</span>")
+
+    def start_status_cycling(self):
+        self.status_cycle_timer.timeout.connect(self.cycle_status_image)
+        self.status_cycling_active = True
+        self.status_cycle_timer.start(2000)
+
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: yellow;'>Started status image cycling (2s interval)</span>")
+        self.logger.info("Started status image cycling")
+
+    def stop_status_cycling(self):
+        """Stop cycling through status images"""
+        if hasattr(self, 'status_cycle_timer') and self.status_cycle_timer.isActive():
+            self.status_cycle_timer.stop()
+            self.status_cycling_active = False
+
+            current_time = datetime.now().strftime("%H:%M:%S")
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: yellow;'>Stopped status image cycling</span>")
+            self.logger.info("Stopped status image cycling")
+
+    def cycle_status_image(self):
+        """Cycle to the next status image"""
+        self.current_status_index = (self.current_status_index % 6) + 1
+
+        try:
+            pixmap = QPixmap(f"gui/resources/status_images/status-{self.current_status_index}.png")
+            if not pixmap.isNull():
+                scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
+                                              Qt.TransformationMode.SmoothTransformation)
+                # Assuming rocket_trajectory_label is accessible - you might need to make it a class variable
+                self.rocket_trajectory_label.setPixmap(scaled_pixmap)
+
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: cyan;'>Status image changed to status-{self.current_status_index}.png</span>")
+            else:
+                self.logger.warning(f"Could not load status-{self.current_status_index}.png")
+        except Exception as e:
+            self.logger.error(f"Error loading status image: {str(e)}")
 
     def handle_processed_data(self, data):
         pass
