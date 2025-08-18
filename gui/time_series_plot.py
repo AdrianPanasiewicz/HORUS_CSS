@@ -8,11 +8,11 @@ from pyqtgraph.exporters import ImageExporter, SVGExporter
 
 
 class TimeSeriesPlot(QWidget):
-	def __init__(self, timespan, parent=None):
+	def __init__(self, timespan, parent=None, line_color='#1f77b4'):
 		super().__init__(parent)
 
 		self.plot_widget = pg.PlotWidget()
-		self.plot_widget.setBackground('k')
+		self.plot_widget.setBackground('#161a22')
 		self.plot_widget.setLabel('left', 'Value')
 		self.plot_widget.setLabel('bottom', 'Time')
 		self.plot_widget.setAxisItems({'bottom': pg.DateAxisItem()})
@@ -20,7 +20,7 @@ class TimeSeriesPlot(QWidget):
 		self.plot_widget.setMenuEnabled(False)
 		self.plot_widget.showGrid(x=True, y=True, alpha=0.3)
 
-		self.line_color = '#1f77b4'
+		self.line_color = line_color
 		self.line_style = 'Solid'
 		self.line_width = 2
 		self.data_markers_visible = True
@@ -33,7 +33,7 @@ class TimeSeriesPlot(QWidget):
 			symbol='o' if self.data_markers_visible else None,
 			symbolSize=4,
 			symbolBrush=self.line_color,
-			name='Data Stream'
+			name='Data Stream',
 		)
 
 		if self.legend_visible:

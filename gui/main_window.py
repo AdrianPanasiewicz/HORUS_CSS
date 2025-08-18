@@ -149,10 +149,10 @@ class MainWindow(QMainWindow):
         self.grid_action.setChecked(True)
         self.grid_action.triggered.connect(self.toggle_plot_grid)
 
-        self.legend_action = self.view_menu.addAction("Legends")
-        self.legend_action.setCheckable(True)
-        self.legend_action.setChecked(True)
-        self.legend_action.triggered.connect(self.toggle_plot_legends)
+        # self.legend_action = self.view_menu.addAction("Legends")
+        # self.legend_action.setCheckable(True)
+        # self.legend_action.setChecked(True)
+        # self.legend_action.triggered.connect(self.toggle_plot_legends)
 
 
         self.view_menu.addSeparator()
@@ -222,7 +222,7 @@ class MainWindow(QMainWindow):
 
     def declare_left_side_widgets(self):
         self.left_layout = QVBoxLayout()
-        self.main_layout.addLayout(self.left_layout, 0, 0)
+        self.main_layout.addLayout(self.left_layout, 0, 0, 1, 1)
 
         global_status_label = QLabel("Status: <span style='color: orange;'>not connected</span>")
 
@@ -258,89 +258,52 @@ class MainWindow(QMainWindow):
             "font-size: 14px;")
         self.left_layout.addWidget(self.terminal_output)
 
+    from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QGroupBox
+    from PyQt6.QtGui import QFont
+    from PyQt6.QtCore import Qt
 
     def declare_right_side_widgets(self):
-
         self.right_layout = QVBoxLayout()
-        self.main_layout.addLayout(self.right_layout, 0, 2)
+        self.main_layout.addLayout(self.right_layout, 0, 2, 1, 1)
 
-        self.rec_bay_layout = QHBoxLayout()
-        self.rec_bay_group = QGroupBox("Recovery bay status")
+        # ------------------ Recovery Bay Temperature ------------------
+        self.temp_group = QGroupBox("Recovery Bay Temperature (0 °C)")
+        temp_layout = QVBoxLayout()
 
-        self.time_pres_plot = TimeSeriesPlot(self.default_timespan)
-        self.time_pres_plot.set_x_label("Time [s]")
-        self.time_pres_plot.set_y_label("Temp [°C]")
+        self.temp_plot = TimeSeriesPlot(self.default_timespan, line_color='#e74c3c')
+        self.temp_plot.set_x_label("Time [s]")
+        self.temp_plot.set_y_label("Temp [°C]")
+        temp_layout.addWidget(self.temp_plot, stretch=1)
 
-        self.rec_bay_hbox = QHBoxLayout()
-        self.rec_bay_hbox.addWidget(self.time_pres_plot,5)
-        self.rec_bay_vbox = QVBoxLayout()
-        self.rec_bay_hbox.addLayout(self.rec_bay_vbox,2)
-        self.rec_bay_layout.addLayout(self.rec_bay_hbox)
+        self.temp_group.setLayout(temp_layout)
+        self.right_layout.addWidget(self.temp_group)
 
-        self.temp_title = QLabel("Temperature:")
-        self.temp_value = QLabel("0 °C")
-        temp_layout = QHBoxLayout()
-        temp_layout.addWidget(self.temp_title)
-        temp_layout.addWidget(self.temp_value)
-        self.rec_bay_vbox.addLayout(temp_layout)
+        # ------------------ Recovery Bay Pressure ------------------
+        self.press_group = QGroupBox("Recovery Bay Pressure (0 hPa)")
+        press_layout = QVBoxLayout()
 
-        self.press_title = QLabel("Pressure:")
-        self.press_value = QLabel("0 hPa")
-        press_layout = QHBoxLayout()
-        press_layout.addWidget(self.press_title)
-        press_layout.addWidget(self.press_value)
-        self.rec_bay_vbox.addLayout(press_layout)
+        self.press_plot = TimeSeriesPlot(self.default_timespan, line_color='#27ae60')
+        self.press_plot.set_x_label("Time [s]")
+        self.press_plot.set_y_label("Pressure [hPa]")
+        press_layout.addWidget(self.press_plot, stretch=1)
 
-        self.rec_bay_group.setLayout(self.rec_bay_layout)
-        self.right_layout.addWidget(self.rec_bay_group)
+        self.press_group.setLayout(press_layout)
+        self.right_layout.addWidget(self.press_group)
 
-        self.rec_bay_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: bold;
-                border-radius: 5px;
-                margin-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                padding: 0 5px;
-            }
-        """)
-        #-------------------------
+        # ------------------ LoRa SNR ------------------
+        self.lora_group = QGroupBox("LoRa SNR Status (0 dB)")
+        lora_layout = QVBoxLayout()
 
-        self.lora_layout = QHBoxLayout()
-        self.lora_group = QGroupBox("LoRa signal status")
-
-        self.lora_snr_plot = TimeSeriesPlot(self.default_timespan)
+        self.lora_snr_plot = TimeSeriesPlot(self.default_timespan, line_color='#2980b9')
         self.lora_snr_plot.set_x_label("Time [s]")
         self.lora_snr_plot.set_y_label("SNR [dB]")
+        lora_layout.addWidget(self.lora_snr_plot, stretch=1)
 
-        self.lora_hbox = QHBoxLayout()
-        self.lora_hbox.addWidget(self.lora_snr_plot,5)
-
-        self.lora_vbox = QVBoxLayout()
-        self.lora_snr_title = QLabel("SNR:")
-        self.lora_snr_value = QLabel("0 dB")
-        lora_snr_layout = QHBoxLayout()
-        lora_snr_layout.addWidget(self.lora_snr_title)
-        lora_snr_layout.addWidget(self.lora_snr_value)
-        self.lora_vbox.addLayout(lora_snr_layout)
-
-        self.lora_freq_title = QLabel("RSSI:")
-        self.lora_freq_value = QLabel("0 dBm")
-        lora_rssi_layout = QHBoxLayout()
-        lora_rssi_layout.addWidget(self.lora_freq_title)
-        lora_rssi_layout.addWidget(self.lora_freq_value)
-        self.lora_vbox.addLayout(lora_rssi_layout)
-
-        self.lora_hbox.addLayout(self.lora_vbox,2)
-        self.lora_layout.addLayout(self.lora_hbox)
-
-        self.lora_group.setLayout(self.lora_layout)
+        self.lora_group.setLayout(lora_layout)
         self.right_layout.addWidget(self.lora_group)
 
-        self.lora_group.setStyleSheet("""
+        # ------------------ Styling ------------------
+        groupbox_style = """
             QGroupBox {
                 font-size: 14px;
                 font-weight: bold;
@@ -352,88 +315,10 @@ class MainWindow(QMainWindow):
                 subcontrol-position: top left;
                 padding: 0 5px;
             }
-        """)
-        # ------------------------
-
-        self.gps_layout = QHBoxLayout()
-        self.gps_group = QGroupBox("GPS signal status")
-
-        self.gps_snr_plot = TimeSeriesPlot(self.default_timespan)
-        self.gps_snr_plot.set_x_label("Time [s]")
-        self.gps_snr_plot.set_y_label("SNR [dB]")
-
-        self.gps_hbox = QHBoxLayout()
-        self.gps_hbox.addWidget(self.gps_snr_plot,5)
-
-        self.gps_vbox = QVBoxLayout()
-
-        self.gps_snr_title = QLabel("SNR:")
-        self.gps_snr_value = QLabel("0 dB")
-        gps_snr_layout = QHBoxLayout()
-        gps_snr_layout.addWidget(self.gps_snr_title)
-        gps_snr_layout.addWidget(self.gps_snr_value)
-        self.gps_vbox.addLayout(gps_snr_layout)
-
-        self.gps_sat_title = QLabel("RSSI:")
-        self.gps_sat_value = QLabel("0 dBm")
-        gps_rssi_layout = QHBoxLayout()
-        gps_rssi_layout.addWidget(self.gps_sat_title)
-        gps_rssi_layout.addWidget(self.gps_sat_value)
-        self.gps_vbox.addLayout(gps_rssi_layout)
-
-        self.gps_hbox.addLayout(self.gps_vbox,2)
-        self.gps_layout.addLayout(self.gps_hbox)
-
-        self.gps_group.setLayout(self.gps_layout)
-        self.right_layout.addWidget(self.gps_group)
-
-        self.gps_group.setStyleSheet("""
-            QGroupBox {
-                font-size: 14px;
-                font-weight: bold;
-                border-radius: 5px;
-                margin-top: 10px;
-            }
-            QGroupBox::title {
-                subcontrol-origin: margin;
-                subcontrol-position: top left;
-                padding: 0 5px;
-            }
-        """)
-
-        bold_font = QFont()
-        bold_font.setBold(True)
-        bold_font.setPointSize(12)
-
-        self.temp_title.setFont(bold_font)
-        self.press_title.setFont(bold_font)
-        self.lora_snr_title.setFont(bold_font)
-        self.lora_freq_title.setFont(bold_font)
-        self.gps_snr_title.setFont(bold_font)
-        self.gps_sat_title.setFont(bold_font)
-
-        self.temp_value.setFont(bold_font)
-        self.press_value.setFont(bold_font)
-        self.lora_snr_value.setFont(bold_font)
-        self.lora_freq_value.setFont(bold_font)
-        self.gps_snr_value.setFont(bold_font)
-        self.gps_sat_value.setFont(bold_font)
-
-        label_width = 120
-        self.temp_title.setFixedWidth(label_width)
-        self.press_title.setFixedWidth(label_width)
-        self.lora_snr_title.setFixedWidth(label_width)
-        self.lora_freq_title.setFixedWidth(label_width)
-        self.gps_snr_title.setFixedWidth(label_width)
-        self.gps_sat_title.setFixedWidth(label_width)
-
-        value_width = 90
-        self.temp_value.setFixedWidth(value_width)
-        self.press_value.setFixedWidth(value_width)
-        self.lora_snr_value.setFixedWidth(value_width)
-        self.lora_freq_value.setFixedWidth(value_width)
-        self.gps_snr_value.setFixedWidth(value_width)
-        self.gps_sat_value.setFixedWidth(value_width)
+        """
+        self.temp_group.setStyleSheet(groupbox_style)
+        self.press_group.setStyleSheet(groupbox_style)
+        self.lora_group.setStyleSheet(groupbox_style)
 
     def generate_sample_data(self):
         base_time = datetime.now()
@@ -565,7 +450,7 @@ class MainWindow(QMainWindow):
 
     def toggle_crosshairs(self):
         state = self.crosshair_action.isChecked()
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+        for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
             plot.toggle_crosshair(state)
 
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -719,37 +604,27 @@ class MainWindow(QMainWindow):
         current_time = datetime.now()
 
         temp_value = np.random.normal(50, 5)
-        self.time_pres_plot.add_point(current_time, temp_value)
-        self.temp_value.setText(f"{temp_value:.1f} °C")
+        self.temp_plot.add_point(current_time, temp_value)
+        self.temp_group.setTitle(f"Recovery Bay Temperature ({temp_value:.1f} °C)")
 
-        pressure_value = np.random.normal(800, 30)
-        self.press_value.setText(f"{pressure_value:.1f} hPa")
 
         snr_value = np.random.normal(5, 1.5)
-        self.lora_snr_plot.add_point(current_time, snr_value)
-        self.lora_snr_value.setText(f"{snr_value:.1f} dB")
+        self.press_plot.add_point(current_time, snr_value)
+        self.press_group.setTitle(f"Recovery Bay Pressure ({snr_value:.1f} hPa)")
 
-        rssi_value = np.random.normal(-90, 3)
-        self.lora_freq_value.setText(f"{rssi_value:.1f} dBm")
+        lora_snr_value = np.random.normal(25, 3)
+        self.lora_snr_plot.add_point(current_time, lora_snr_value)
+        self.lora_group.setTitle(f"LoRa SNR Status ({lora_snr_value:.1f} dB)")
 
-        gps_snr_value = np.random.normal(25, 3)
-        self.gps_snr_plot.add_point(current_time, gps_snr_value)
-        self.gps_snr_value.setText(f"{gps_snr_value:.1f} dB")
-
-        sat_value = np.random.normal(-100, 5)
-        self.gps_sat_value.setText(f"{sat_value:.1f} dBm")
 
     def clear_plots(self):
-        self.time_pres_plot.clear_data()
+        self.temp_plot.clear_data()
+        self.press_plot.clear_data()
         self.lora_snr_plot.clear_data()
-        self.gps_snr_plot.clear_data()
 
-        self.temp_value.setText("0 °C")
-        self.press_value.setText("0 hPa")
-        self.lora_snr_value.setText("0 dB")
-        self.lora_freq_value.setText("0 dBm")
-        self.gps_snr_value.setText("0 dB")
-        self.gps_sat_value.setText("0 dBm")
+        self.temp_group.setTitle(f"Recovery Bay Temperature ({0} °C)")
+        self.press_group.setTitle(f"Recovery Bay Pressure ({0} hPa)")
+        self.lora_group.setTitle(f"LoRa SNR Status ({0} dB)")
 
         current_time = datetime.now().strftime("%H:%M:%S")
         self.terminal_output.append(
@@ -761,9 +636,9 @@ class MainWindow(QMainWindow):
         self.clear_terminal()
 
     def change_plot_timespans(self, timespan):
-        self.time_pres_plot.update_timespan(timespan)
+        self.temp_plot.update_timespan(timespan)
+        self.press_plot.update_timespan(timespan)
         self.lora_snr_plot.update_timespan(timespan)
-        self.gps_snr_plot.update_timespan(timespan)
 
     def save_terminal_log(self):
         path = os.path.join(self.csv_handler.session_dir, "terminal_log.txt")
@@ -782,9 +657,9 @@ class MainWindow(QMainWindow):
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
 
             plots = {
-                "pressure": self.time_pres_plot,
-                "lora": self.lora_snr_plot,
-                "gps": self.gps_snr_plot
+                "temperature": self.temp_plot,
+                "pressure": self.press_plot,
+                "lora": self.lora_snr_plot
             }
 
             for name, plot in plots.items():
@@ -804,7 +679,7 @@ class MainWindow(QMainWindow):
 
     def toggle_data_markers(self):
         state = self.data_markers_action.isChecked()
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+        for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
             plot.toggle_data_markers(state)
 
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -814,12 +689,12 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Data markers toggled to {status}")
 
     def change_line_colors(self):
-        current_color = self.time_pres_plot.line_color
+        current_color = self.temp_plot.line_color
 
         current_qcolor = QColor(current_color)
         color = QColorDialog.getColor(current_qcolor, self, "Select Line Color")
         if color.isValid():
-            for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+            for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
                 plot.set_line_color(color)
 
             current_time = datetime.now().strftime("%H:%M:%S")
@@ -830,7 +705,7 @@ class MainWindow(QMainWindow):
 
     def toggle_plot_grid(self):
         state = self.grid_action.isChecked()
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+        for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
             plot.toggle_grid(state)
 
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -839,10 +714,10 @@ class MainWindow(QMainWindow):
             f">{current_time}: <span style='color: lightblue;'>Plot grid turned {status}</span>")
         self.logger.info(f"Plot grid toggled to {status}")
 
-    def toggle_plot_legends(self):
-        state = self.legend_action.isChecked()
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
-            plot.toggle_legend(state)
+    # def toggle_plot_legends(self):
+    #     state = self.legend_action.isChecked()
+    #     for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
+    #         plot.toggle_legend(state)
 
         current_time = datetime.now().strftime("%H:%M:%S")
         status = "ON" if state else "OFF"
@@ -930,7 +805,7 @@ class MainWindow(QMainWindow):
 
     def toggle_auto_zoom(self):
         state = self.auto_zoom_action.isChecked()
-        for plot in [self.time_pres_plot, self.lora_snr_plot, self.gps_snr_plot]:
+        for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
             plot.toggle_auto_zoom(state)
 
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -946,9 +821,9 @@ class MainWindow(QMainWindow):
 
             # Calculate for each plot
             plots = {
-                "Pressure/Temperature": self.time_pres_plot,
-                "LoRa SNR": self.lora_snr_plot,
-                "GPS SNR": self.gps_snr_plot
+                "Temperature": self.temp_plot,
+                "Pressure": self.press_plot,
+                "LoRa SNR": self.lora_snr_plot
             }
 
             for name, plot in plots.items():
