@@ -4,6 +4,7 @@ import platform
 from PyQt6.QtWidgets import QApplication, QDialog
 from gui.main_window import MainWindow
 from core.serial_config import SerialConfigDialog
+from core.network_reader import NetworkReader
 from core.utils import Utils
 import os
 
@@ -23,6 +24,8 @@ def main():
     logger = logging.getLogger('HORUS_CSS_logger')
     logger.info(f"Log file location: {log_file}")
     logger.info("Uruchamianie aplikacji")
+
+    network_reader = NetworkReader(host = "192.168.236.1", port = 65432)
 
     app = QApplication(sys.argv)
 
