@@ -1,6 +1,7 @@
 import logging
 import os
-
+import platform
+import subprocess
 import numpy as np
 from PyQt6.QtCore import QTimer, Qt
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
@@ -358,7 +359,6 @@ class MainWindow(QMainWindow):
             Astronautics Students of MUT.</p>
             <p><b>Authors:</b> Adrian Panasiewicz, Filip Sudak</p>
             <p><b>Copyright:</b> © 2025 KNS LiK </p>
-            <p>Built with PyQt6</p>
         </div>
         """
 
@@ -394,11 +394,6 @@ class MainWindow(QMainWindow):
             self.showFullScreen()
 
     def open_session_directory(self):
-        import os
-        import platform
-        import subprocess
-        from PyQt6.QtWidgets import QMessageBox
-
         session_path = self.csv_handler.session_dir
 
         if not os.path.exists(session_path):
