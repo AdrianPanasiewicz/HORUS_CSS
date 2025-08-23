@@ -174,13 +174,13 @@ class MainWindow(QMainWindow):
         self.data_markers_action.setChecked(True)
         self.data_markers_action.triggered.connect(self.toggle_data_markers)
 
-        self.color_action = self.view_menu.addAction("Plot color")
-        self.color_action.triggered.connect(self.change_line_colors)
-
         self.grid_action = self.view_menu.addAction("Grid")
         self.grid_action.setCheckable(True)
         self.grid_action.setChecked(True)
         self.grid_action.triggered.connect(self.toggle_plot_grid)
+
+        self.color_action = self.view_menu.addAction("Plot color")
+        self.color_action.triggered.connect(self.change_line_colors)
 
         self.view_menu.addSeparator()
         self.view_menu.addAction("Clear Terminal", self.clear_terminal)
