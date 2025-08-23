@@ -491,29 +491,55 @@ class MainWindow(QMainWindow):
 
     def setup_status_bar(self):
         self.status_bar_visible = True
+
+        status_container = QWidget()
+        status_layout = QHBoxLayout()
+        status_layout.setContentsMargins(0, 0, 0, 0)
+        status_layout.setSpacing(20)
+        status_container.setLayout(status_layout)
+        status_container.setStyleSheet("background: transparent")
+
+        left_container = QWidget()
+        left_layout = QHBoxLayout()
+        left_layout.setContentsMargins(0, 0, 0, 0)
+        left_layout.setSpacing(10)
+        left_container.setLayout(left_layout)
+
         self.status_logo = QLabel()
         self.status_logo.setFixedSize(24, 24)
         self.status_logo.setScaledContents(True)
         logo_pixmap = QPixmap(r"gui/resources/black_icon_without_background.png").scaled(30, 30)
         self.status_logo.setPixmap(logo_pixmap)
-        self.statusBar().addWidget(self.status_logo)
+        left_layout.addWidget(self.status_logo)
 
         current_time = datetime.now().strftime("%H:%M:%S")
         self.status_packet_label = QLabel(f"Last received packet: {current_time} s")
-        self.status_packet_label.setStyleSheet("font-size: 14px;")
-        self.statusBar().addWidget(self.status_packet_label)
+        self.status_packet_label.setStyleSheet("font-size: 14px; font-weight: bold;")
+        left_layout.addWidget(self.status_packet_label)
 
-        self.statusBar().addWidget(QLabel(), 1)
+        status_layout.addWidget(left_container, 0, alignment=Qt.AlignmentFlag.AlignLeft)
 
-        self.status_title_label = QLabel("HORUS Communication & System Status Station  \t\t\t")
+        self.status_title_label = QLabel("HORUS Communication & System Status Station")
         self.status_title_label.setStyleSheet("font-size: 14px; font-weight: bold;")
-        self.statusBar().addWidget(self.status_title_label)
+        status_layout.addWidget(self.status_title_label, 1, alignment=Qt.AlignmentFlag.AlignHCenter)
 
-        self.statusBar().addWidget(QLabel(), 1)
+        right_container = QWidget()
+        right_layout = QHBoxLayout()
+        right_layout.setContentsMargins(0,0,0,0)
+        right_layout.setSpacing(10)
+        right_container.setLayout(right_layout)
+
+        self.connection_label = QLabel("Not connected to HORUS CSS")
+        self.connection_label.setStyleSheet("font-size: 14px; font-weight: bold; color: red;")
+        right_layout.addWidget(self.connection_label)
 
         self.heartbeat_placeholder = QLabel("●")
-        self.heartbeat_placeholder.setStyleSheet("color: transparent; font-size: 14px;")
-        self.statusBar().addPermanentWidget(self.heartbeat_placeholder)
+        self.heartbeat_placeholder.setStyleSheet("background: transparent; color: transparent; font-size: 14px;")
+        right_layout.addWidget(self.heartbeat_placeholder)
+
+        status_layout.addWidget(right_container, 0, alignment=Qt.AlignmentFlag.AlignRight)
+
+        self.statusBar().addWidget(status_container, 1)
 
         self.setup_heartbeat()
 
