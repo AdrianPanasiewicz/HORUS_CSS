@@ -100,6 +100,35 @@ class MainWindow(QMainWindow):
 
     def declare_menus(self):
         self.menu = self.menuBar()
+        self.menu.setStyleSheet("""
+        QMenu {
+            background-color: #1e1e1e;
+            color: white;
+            border: 1px solid #444;
+        }
+
+        QMenu::item {
+            padding: 5px 25px 5px 25px;
+        }
+
+        QMenu::item:selected {
+            background-color: #555;
+        }
+
+        QMenu::indicator {
+            width: 14px;
+            height: 14px;
+            border-radius: 7px;  /* makes it circular */
+            border: 1px solid #888;
+            background-color: #2e2e2e;
+        }
+
+        QMenu::indicator:checked {
+            background-color: #4caf50;  /* nicer green */
+            border: 1px solid #4caf50;
+            box-shadow: 0px 0px 2px black; /* subtle shadow */
+        }
+        """)
         self.file_menu = self.menu.addMenu("File")
         self.view_menu = self.menu.addMenu("View")
         self.theme_menu = self.view_menu.addMenu("Themes")
@@ -145,16 +174,13 @@ class MainWindow(QMainWindow):
         self.data_markers_action.setChecked(True)
         self.data_markers_action.triggered.connect(self.toggle_data_markers)
 
+        self.color_action = self.view_menu.addAction("Plot color")
+        self.color_action.triggered.connect(self.change_line_colors)
+
         self.grid_action = self.view_menu.addAction("Grid")
         self.grid_action.setCheckable(True)
         self.grid_action.setChecked(True)
         self.grid_action.triggered.connect(self.toggle_plot_grid)
-
-        # self.legend_action = self.view_menu.addAction("Legends")
-        # self.legend_action.setCheckable(True)
-        # self.legend_action.setChecked(True)
-        # self.legend_action.triggered.connect(self.toggle_plot_legends)
-
 
         self.view_menu.addSeparator()
         self.view_menu.addAction("Clear Terminal", self.clear_terminal)
@@ -684,19 +710,32 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Data markers toggled to {status}")
 
     def change_line_colors(self):
-        current_color = self.temp_plot.line_color
+        plots = {
+            "Temperature": self.temp_plot,
+            "Pressure": self.press_plot,
+            "LoRa SNR": self.lora_snr_plot
+        }
 
+        plot_name, ok = QInputDialog.getItem(
+            self, "Select Plot", "Choose plot to change color:", list(plots.keys()), 0, False
+        )
+
+        if not ok:
+            return
+
+        current_color = plots[plot_name].line_color
         current_qcolor = QColor(current_color)
+
         color = QColorDialog.getColor(current_qcolor, self, "Select Line Color")
+
         if color.isValid():
-            for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
-                plot.set_line_color(color)
+            plots[plot_name].set_line_color(color)
 
             current_time = datetime.now().strftime("%H:%M:%S")
             self.terminal_output.append(
-                f">{current_time}: <span style='color: {color.name()};'>Plot line color changed</span>")
-            self.logger.info(f"Plot line color changed to {color.name()}")
-
+                f">{current_time}: <span style='color: {color.name()};'>Plot '{plot_name}' line color changed</span>"
+            )
+            self.logger.info(f"Plot '{plot_name}' line color changed to {color.name()}")
 
     def toggle_plot_grid(self):
         state = self.grid_action.isChecked()
@@ -710,7 +749,7 @@ class MainWindow(QMainWindow):
         self.logger.info(f"Plot grid toggled to {status}")
 
     # def toggle_plot_legends(self):
-    #     state = self.legend_action.isChecked()
+    #     state = self.color_action.isChecked()
     #     for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
     #         plot.toggle_legend(state)
 
