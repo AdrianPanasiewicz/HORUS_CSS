@@ -21,16 +21,16 @@ from core.process_data import ProcessData
 from core.csv_handler import CsvHandler
 
 class MainWindow(QMainWindow):
-    def __init__(self, config):
+    def __init__(self, config, network_reader):
         super().__init__()
-        self.connect_gui_to_backend(config)
+        self.connect_gui_to_backend(config, network_reader)
         self.declare_variables()
         self.initalizeUI()
         self.define_separators()
         self.setup_status_bar()
         self.serial.start_reading()
 
-    def connect_gui_to_backend(self, config):
+    def connect_gui_to_backend(self, config, network_reader):
         self.logger = logging.getLogger('HORUS_CSS.main_window')
         self.logger.info("Inicjalizacja głównego okna")
 
@@ -43,6 +43,12 @@ class MainWindow(QMainWindow):
         self.processor = ProcessData()
         self.logger.info(
             f"Singleton ProcessData zainicjalizowany")
+
+        self.network_reader = network_reader
+
+        self.network_reader.subcribe_on_connection(self.on_partner_connected)
+        self.network_reader.subcribe_on_disconnect(self.on_partner_disconnected)
+        self.network_reader.subcribe_on_data_received(self.processor.on_ethernet_data_received)
 
         self.default_timespan = 30
 
@@ -68,6 +74,7 @@ class MainWindow(QMainWindow):
         self.status_cycling_active = False
 
         self.current_data = {
+            'timestamp': 0.0,
             'velocity': 0.0,
             'altitude': 0.0,
             'pitch': 0.0,
@@ -75,9 +82,10 @@ class MainWindow(QMainWindow):
             'status': 0,
             'latitude': 52.2549,
             'longitude': 20.9004,
-            'len': 0,
-            'rssi': 0,
-            'snr': 0
+            'rssi': 0.0,
+            'snr': 0.0,
+            'bay_pressure': 0.0,
+            'bay_temperature': 0.0
         }
 
     def initalizeUI(self):
@@ -251,17 +259,17 @@ class MainWindow(QMainWindow):
         self.left_layout = QVBoxLayout()
         self.main_layout.addLayout(self.left_layout, 0, 0, 1, 1)
 
-        global_status_label = QLabel("Status: <span style='color: orange;'>not connected</span>")
+        self.global_status_label = QLabel("Status: <span style='color: orange;'>not connected</span>")
 
         status_font =  QFont()
         status_font.setPointSize(30)
         status_font.setFamily("Helvetica Neue")
         status_font.setBold(True)
-        global_status_label.setFont(status_font)
+        self.global_status_label.setFont(status_font)
 
         status_wrapper = QHBoxLayout()
         status_wrapper.addStretch()
-        status_wrapper.addWidget(global_status_label)
+        status_wrapper.addWidget(self.global_status_label)
         status_wrapper.addStretch()
 
         self.left_layout.addLayout(status_wrapper)
@@ -529,7 +537,7 @@ class MainWindow(QMainWindow):
         right_layout.setSpacing(10)
         right_container.setLayout(right_layout)
 
-        self.connection_label = QLabel("Not connected to HORUS CSS")
+        self.connection_label = QLabel("HORUS FAS disconnected")
         self.connection_label.setStyleSheet("font-size: 14px; font-weight: bold; color: red;")
         right_layout.addWidget(self.connection_label)
 
@@ -971,190 +979,63 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error loading status image: {str(e)}")
 
     def handle_processed_data(self, data):
-        pass
-        # self.logger.debug(
-        #     f"Odebrano dane przetworzone: {data}")
-        # self.current_data = data
-        # try:
-        #     self.update_data()
-        #     self.csv_handler.write_row(data)
-        #
-        #     if data['latitude'] != 0.0 and data[
-        #         'longitude'] != 0.0:
-        #         self.current_lat = data['latitude']
-        #         self.current_lng = data['longitude']
-        #         self.initialize_map()
-        #         self.update_map_view()
-        #
-        # except Exception as e:
-        #     self.logger.exception(
-        #         f"Błąd w update_data(): {e}")
+        self.logger.debug(
+            f"Odebrano dane przetworzone: {data}")
+        self.current_data = data
+        try:
+            self.update_data()
+            self.csv_handler.write_row(data)
+        except Exception as e:
+            print("bład", e)
+            self.logger.exception(
+                f"Błąd w update_data(): {e}")
 
     def update_data(self):
-        pass
-        # """Aktualizacja danych na interfejsie"""
-        # # Aktualizacja wykresów
-        # self.alt_plot.update_plot(
-        #     self.current_data['altitude'])
-        # self.velocity_plot.update_plot(
-        #     self.current_data['velocity'])
-        # self.pitch_plot.update_plot(
-        #     self.current_data['pitch'])
-        # self.roll_plot.update_plot(
-        #     self.current_data['roll'])
-        #
-        # self.label_info.setText(
-        #     f"Pitch: {self.current_data['pitch']:.2f}°, Roll: {self.current_data['roll']:.2f}°\n"
-        #     f"V: {self.current_data['velocity']:.2f} m/s, H: {self.current_data['altitude']:.2f} m"
-        # )
-        # self.label_pos.setText(
-        #     f"LON:\t{self.current_data['longitude']:.6f}° N \nLAT:\t{self.current_data['latitude']:.6f}° E"
-        # )
-        #
-        # self.now_str = datetime.now().strftime("%H:%M:%S")
-        # msg = (
-        #     f"{self.current_data['velocity']};{self.current_data['altitude']};"
-        #     f"{self.current_data['pitch']};{self.current_data['roll']};"
-        #     f"{self.current_data['status']};{self.current_data['latitude']};"
-        #     f"{self.current_data['longitude']}"
-        # )
-        # self.console.append(
-        #     f"{self.now_str} | LEN: {self.current_data['len']} bajtów | "
-        #     f"RSSI: {self.current_data['rssi']} dBm | "
-        #     f"SNR: {self.current_data['snr']} dB | msg: {msg}"
-        # )
-        # self.logger.debug(f"Odebrano dane: {msg}")
-        #
-        # status = self.current_data['status']
-        #
-        # # Calibration
-        # if status & (1 << 0):
-        #     if not self.calib_detection:
-        #         self.calib_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.calib_button.setText("Calibration: On")
-        #         self.console.append(f"{self.now_str} | CALIB ON")
-        #         self.logger.info("Detekcja kalibracji")
-        #         self.calib_detection = True
-        # else:
-        #     if self.calib_detection:
-        #         self.calib_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.calib_button.setText("Calibration: Off")
-        #         self.calib_detection = False
-        #
-        # # Start
-        # if status & (1 << 1):
-        #     if not self.start_detection:
-        #         self.start_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.logger.info("Detekcja startu")
-        #         self.console.append(f"{self.now_str} | START DETECTION")
-        #         print("Detekcja startu")
-        #         self.start_detection = True
-        # else:
-        #     if self.start_detection:
-        #         self.start_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.start_detection = False
-        #
-        # # Engine
-        # if status & (1 << 2):
-        #     if not self.engine_detection:
-        #         self.engine_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.engine_buttonn.setText("Engine: On")
-        #         self.console.append(f"{self.now_str} | ENGINE ON")
-        #         self.logger.info("Detekcja uruchomienia silników")
-        #         self.engine_detection = True
-        # else:
-        #     if self.engine_detection:
-        #         self.engine_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.engine_buttonn.setText("Engine: Off")
-        #         self.console.append(f"{self.now_str} | ENGINE OF")
-        #         self.engine_detection = False
-        #
-        # # Apogee
-        # if status & (1 << 3):
-        #     if not self.apogee_detection:
-        #         self.apogee_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.console.append(f"{self.now_str} | APOGEE DETECTION")
-        #         self.logger.info("Detekcja apogeum")
-        #         self.apogee_detection = True
-        # else:
-        #     if self.apogee_detection:
-        #         self.apogee_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.apogee_detection = False
-        #
-        # # Recovery
-        # if status & (1 << 4):
-        #     if not self.recovery_detection:
-        #         self.recovery_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.recovery_button.setText("Recovery: On")
-        #         self.console.append(f"{self.now_str} | RECOVERY DETECTION")
-        #         self.logger.info("Detekcja odzysku")
-        #         print("Detekcja odzysku")
-        #         self.recovery_detection = True
-        # else:
-        #     if self.recovery_detection:
-        #         self.recovery_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.recovery_button.setText("Recovery: Off")
-        #         self.recovery_detection = False
-        #
-        # # Landing
-        # if status & (1 << 5):
-        #     if not self.landing_detection:
-        #         self.landing_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}"
-        #         )
-        #         self.console.append(f"{self.now_str} | DESCENT DETECTION")
-        #         self.logger.info("Detekcja lądowania")
-        #         print("Detekcja lądowania")
-        #         self.landing_detection = True
-        # else:
-        #     if self.landing_detection:
-        #         self.landing_button.setStyleSheet(
-        #             "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}"
-        #         )
-        #         self.landing_detection = False
-        #
-        # snr_threshold = 5.0
-        # rssi_threshold = -80.0
-        # snr = self.current_data['snr']
-        # rssi = self.current_data['rssi']
-        #
-        # if snr >= snr_threshold and rssi >= rssi_threshold:
-        #     self.signal_quality = "Good"
-        #     self.signal_button.setStyleSheet(
-        #         "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: green; padding: 5px;}")
-        # elif snr < snr_threshold and rssi < rssi_threshold:
-        #     self.signal_quality = "Weak"
-        #     self.signal_button.setStyleSheet(
-        #         "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: red; padding: 5px;}")
-        # else:
-        #     self.signal_quality = "Average"
-        #     self.signal_button.setStyleSheet(
-        #         "QPushButton {border: 2px solid white; border-radius: 5px; background-color: black; color: yellow; padding: 5px;}")
-        #
-        # self.signal_button.setText(
-        #     f"Signal: {self.signal_quality}")
-        # self.logger.debug(
-        #     f"Jakość sygnału: {self.signal_quality} (SNR: {snr}, RSSI: {rssi})")
+        """Aktualizacja danych na interfejsie"""
+        current_time = datetime.now()
+
+        temp_value = self.current_data['bay_temperature']
+        self.temp_plot.add_point(current_time, temp_value)
+        self.temp_group.setTitle(f"Recovery Bay Temperature ({temp_value:.1f} °C)")
+
+        press_value = self.current_data['bay_pressure']
+        self.press_plot.add_point(current_time, press_value)
+        self.press_group.setTitle(f"Recovery Bay Pressure ({press_value:.1f} hPa)")
+
+        lora_snr_value = self.current_data['snr']
+        self.lora_snr_plot.add_point(current_time, lora_snr_value)
+        self.lora_group.setTitle(f"LoRa SNR Status ({lora_snr_value:.1f} dB)")
+
+        message_timestamp = datetime.now().strftime("%H:%M:%S")
+        packet_timestamp_str = self.current_data['timestamp']
+        packet_dt = datetime.fromisoformat(packet_timestamp_str)
+        formatted_packet_time = packet_dt.strftime("%H:%M:%S.%f")[:-4]
+        self.terminal_output.append(
+            f">{message_timestamp}: Packet received from HORUS FAS. Packet timestamp: {formatted_packet_time}")
+
+        self.status_packet_label.setText(f"Last received packet: {message_timestamp} s")
+
+
+    def on_partner_connected(self):
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.logger.info("HORUS FAS connected to HORUS CSS")
+        self.connection_label.setText("   HORUS FAS connected")
+        self.connection_label.setStyleSheet("color: #66FF00; font-weight: bold;")
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: #66FF00;'>Connected to HORUS FAS</span>")
+
+        self.global_status_label.setText("Status: <span style='color: #66FF00;'>Connected</span>")
+        self.is_partner_connected = True
+
+    def on_partner_disconnected(self):
+        current_time = datetime.now().strftime("%H:%M:%S")
+        self.logger.info("HORUS FAS disconnected from HORUS CSS")
+        self.connection_label.setText("HORUS FAS disconnected")
+        self.connection_label.setStyleSheet("color: red; font-weight: bold;")
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: red;'>Disconnected from HORUS FAS</span>")
+        self.global_status_label.setText("Status: <span style='color: red;'>Not connected</span>")
+        self.is_partner_connected = False
 
     def closeEvent(self, event):
         if hasattr(self, "heartbeat_timer") and self.heartbeat_timer.isActive():

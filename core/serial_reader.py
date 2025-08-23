@@ -5,7 +5,6 @@ import logging
 import threading
 from PyQt6.QtCore import QObject, pyqtSignal
 
-
 class SerialReader(QObject):
     telemetry_received = pyqtSignal(dict)
     transmission_info_received = pyqtSignal(dict)
@@ -41,7 +40,7 @@ class SerialReader(QObject):
         if self.running:
             self.logger.debug("start_reading() wywołane, ale wątek już działa")
             return
-            s
+
         if not self.connected:
             self.logger.warning("Próba uruchomienia odczytu bez połączenia")
             return

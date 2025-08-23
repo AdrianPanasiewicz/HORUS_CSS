@@ -1,6 +1,7 @@
 import sys
 import logging
 import platform
+import threading
 from PyQt6.QtWidgets import QApplication, QDialog
 from gui.main_window import MainWindow
 from core.serial_config import SerialConfigDialog
@@ -37,7 +38,9 @@ def main():
         config = {'port': "", 'baudrate': 9600, 'lora_config': None, 'is_config_selected': True}
         logger.info("Użytkownik zrezygnował z portu – używam domyślnych ustawień")
 
-    window = MainWindow(config)
+    window = MainWindow(config, network_reader)
+    threading.Thread(target=network_reader.connect_to_server).start()
+
     window.show()
     exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
@@ -54,4 +57,6 @@ if __name__ == "__main__":
     try:
         main()
     except Exception as e:
+        logger = logging.getLogger('HORUS_CSS_logger')
+        logger.error(f"An exception has occurred: {e}")
         print("An exception has occurred: ", e)
