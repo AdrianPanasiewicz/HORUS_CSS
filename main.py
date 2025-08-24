@@ -46,7 +46,6 @@ def main():
     window.show()
 
     exit_code = app.exec()
-    network_reader.close_connection()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
     sys.exit(exit_code)
 

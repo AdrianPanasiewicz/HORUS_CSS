@@ -73,8 +73,6 @@ class NetworkReader:
 				sleep(0.5)
 			except (BrokenPipeError, ConnectionResetError, OSError):
 				self.logger.warning("Connection lost during heartbeat check.")
-				for on_disconnection in self.on_disconnection_subscibers:
-					on_disconnection()
 				self.conn.close()
 				self.conn = None
 				for on_disconnection in self.on_disconnection_subscibers:
@@ -93,11 +91,3 @@ class NetworkReader:
 	def subcribe_on_data_received(self, callback):
 		self.on_data_received_subscibers.append(callback)
 		self.logger.info(f"Added {callback} as a subscriber to on_data_received_subscibers.")
-
-	def close_connection(self):
-		if self.conn:
-			self.conn.close()
-			self.conn = None
-			self.logger.info("Zamknięto połączenie z serwerem")
-			for on_disconnected in self.on_disconnection_subscibers:
-				on_disconnected()
