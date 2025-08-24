@@ -51,8 +51,8 @@ class MissionStatusWidget(QWidget):
 		labels_layout = QHBoxLayout(labels_container)
 		labels_layout.setContentsMargins(0, 0, 0, 0)
 		labels_layout.setSpacing(5)
-		milestones = ["Calibration", "Start", "Apogeum", "Recovery", "Landing"]
-		milestone_positions = [1, 25, 50, 75, 100]
+		milestones = ["Calibration", "Start", "Engine", "Apogee", "Recovery", "Landing"]
+		milestone_positions = [16, 33, 50, 66, 83, 100]
 		labels_layout.addSpacing(5)
 
 		for i, (milestone, position) in enumerate(zip(milestones, milestone_positions)):
@@ -90,11 +90,6 @@ class MissionStatusWidget(QWidget):
 
 		labels_layout.addSpacing(5)
 		main_layout.addWidget(labels_container)
-
-		# info_label = QLabel("Mission Progress: 40% Complete")
-		# info_label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-		# info_label.setStyleSheet("font-weight: bold; color: #2c3e50; font-size: 16px;")
-		# main_layout.addWidget(info_label)
 
 		self.setLayout(main_layout)
 		self.setWindowTitle("Mission Status")

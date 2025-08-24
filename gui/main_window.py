@@ -88,7 +88,8 @@ class MainWindow(QMainWindow):
             'rssi': 0.0,
             'snr': 0.0,
             'bay_pressure': 0.0,
-            'bay_temperature': 0.0
+            'bay_temperature': 0.0,
+            'progress': 0
         }
 
     def initalizeUI(self):
@@ -281,8 +282,8 @@ class MainWindow(QMainWindow):
         self.rocket_trajectory_label.setScaledContents(True)
         self.left_layout.addWidget(self.rocket_trajectory_label)
 
-        mission_status = MissionStatusWidget()
-        self.left_layout.addWidget(mission_status)
+        self.mission_status = MissionStatusWidget()
+        self.left_layout.addWidget(self.mission_status)
 
         # pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
         # scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
@@ -991,6 +992,7 @@ class MainWindow(QMainWindow):
             self.logger.exception(
                 f"Błąd w update_data(): {e}")
 
+
     def update_data(self):
         """Aktualizacja danych na interfejsie"""
         current_time = datetime.now()
@@ -1016,6 +1018,12 @@ class MainWindow(QMainWindow):
 
         self.status_packet_label.setText(f"Last received packet: {message_timestamp} s")
 
+        if self.current_data['progress'] != -1:
+            self.mission_status.progress_bar.setValue(self.current_data['progress'])
+        else:
+            self.mission_status.progress_bar.setValue(0)
+            self.terminal_output.append(
+                f">{current_time}: <span style='color: red;'>Received invalid status from LOTUS ONE. Received packet: {self.current_data['status']}</span>")
 
     def on_partner_connected(self):
         current_time = datetime.now().strftime("%H:%M:%S")

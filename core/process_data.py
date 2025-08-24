@@ -1,5 +1,7 @@
 import re
 import logging
+from datetime import datetime
+
 from PyQt6.QtCore import QObject, pyqtSignal
 
 
@@ -26,7 +28,8 @@ class ProcessData(QObject):
             'rssi': 0.0,
             'snr': 0.0,
             'bay_pressure': 0.0,
-            'bay_temperature': 0.0
+            'bay_temperature': 0.0,
+            'progress': 0
         }
 
     def handle_telemetry(self, telemetry):
@@ -48,6 +51,8 @@ class ProcessData(QObject):
 
         self.logger.debug("Data packet processed")
 
+        self.process_status()
+
         try:
             self.logger.debug(
                 f"Połączone dane do wysłania: {self.current_data}")
@@ -56,6 +61,27 @@ class ProcessData(QObject):
             self.logger.exception(
                 f"Błąd podczas łączenia danych telemetrycznych i transmisyjnych: {e}")
 
+    def count_leading_ones(status, bit_length=6):
+        mask = (1 << bit_length) - 1
+        status &= mask
+        found_zero = False
+        count = 0
+        for i in range(bit_length - 1, -1, -1):
+            if status & (1 << i):
+                if found_zero:
+                    return -1
+                count += 1
+            else:
+                found_zero = True
+        return count
+
+    def process_status(self):
+        status = self.current_data['status']
+        ones_count = self.count_leading_ones(status)
+        if ones_count != -1:
+            self.current_data['progress'] = ones_count*16
+        else:
+            self.current_data['progress'] = -1
 
     def process_and_emit(self):
         if self.current_telemetry and self.current_transmission:
