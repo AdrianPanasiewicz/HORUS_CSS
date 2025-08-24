@@ -3,7 +3,8 @@ import os
 import platform
 import subprocess
 import numpy as np
-from PyQt6.QtCore import QTimer, Qt
+from PyQt6.QtCore import QTimer
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QWidget, QVBoxLayout,
                              QHBoxLayout, QColorDialog,
@@ -12,6 +13,8 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QFrame, QTextBrowser, QDialogButtonBox,
                              QSizePolicy, QGroupBox, QMessageBox,
                              QInputDialog, QDialog)
+
+from gui.mission_status_widget import MissionStatusWidget
 from gui.time_series_plot import TimeSeriesPlot
 from datetime import datetime, timedelta
 from serial.tools import list_ports
@@ -259,7 +262,7 @@ class MainWindow(QMainWindow):
         self.left_layout = QVBoxLayout()
         self.main_layout.addLayout(self.left_layout, 0, 0, 1, 1)
 
-        self.global_status_label = QLabel("Status: <span style='color: orange;'>not connected</span>")
+        self.global_status_label = QLabel("Status: <span style='color: orange;'>Not connected</span>")
 
         status_font =  QFont()
         status_font.setPointSize(30)
@@ -278,12 +281,13 @@ class MainWindow(QMainWindow):
         self.rocket_trajectory_label.setScaledContents(True)
         self.left_layout.addWidget(self.rocket_trajectory_label)
 
-        pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
-        scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
-                                      Qt.TransformationMode.SmoothTransformation)
-        self.rocket_trajectory_label.setPixmap(scaled_pixmap)
-        # rocket_trajectory_label.setSizePolicy(
-        #     QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        mission_status = MissionStatusWidget()
+        self.left_layout.addWidget(mission_status)
+
+        # pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
+        # scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
+        #                               Qt.TransformationMode.SmoothTransformation)
+        # self.rocket_trajectory_label.setPixmap(scaled_pixmap)
 
         self.terminal_output = QTextBrowser()
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -293,9 +297,6 @@ class MainWindow(QMainWindow):
             "font-size: 14px;")
         self.left_layout.addWidget(self.terminal_output)
 
-    from PyQt6.QtWidgets import QVBoxLayout, QHBoxLayout, QLabel, QGroupBox
-    from PyQt6.QtGui import QFont
-    from PyQt6.QtCore import Qt
 
     def declare_right_side_widgets(self):
         self.right_layout = QVBoxLayout()
