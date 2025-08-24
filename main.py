@@ -26,8 +26,6 @@ def main():
     logger.info(f"Log file location: {log_file}")
     logger.info("Uruchamianie aplikacji")
 
-    network_reader = NetworkReader(host = "192.168.236.1", port = 65432)
-
     app = QApplication(sys.argv)
 
     config_dialog = SerialConfigDialog()
@@ -35,8 +33,11 @@ def main():
         config = config_dialog.get_settings()
         logger.info(f"Konfiguracja portu załadowana: {config}")
     else:
-        config = {'port': "", 'baudrate': 9600, 'lora_config': None, 'is_config_selected': True}
+        config = {'port': "", 'baudrate': 9600, 'lora_config': None, 'is_config_selected': True, "network": {'ip_address': "192.168.236.1", "port": "65432"}}
         logger.info("Użytkownik zrezygnował z portu – używam domyślnych ustawień")
+
+    network_config = config['network']
+    network_reader = NetworkReader(host=network_config['ip_address'], port=int(network_config['port']))
 
     window = MainWindow(config, network_reader)
     threading.Thread(target=network_reader.connect_to_server).start()
