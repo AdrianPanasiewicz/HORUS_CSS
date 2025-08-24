@@ -40,10 +40,13 @@ def main():
     network_reader = NetworkReader(host=network_config['ip_address'], port=int(network_config['port']))
 
     window = MainWindow(config, network_reader)
-    threading.Thread(target=network_reader.connect_to_server).start()
+    network_thread = threading.Thread(target=network_reader.connect_to_server, daemon=True)
+    network_thread.start()
 
     window.show()
+
     exit_code = app.exec()
+    network_reader.close_connection()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
     sys.exit(exit_code)
 
