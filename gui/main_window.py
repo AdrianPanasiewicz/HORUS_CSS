@@ -24,16 +24,16 @@ from core.process_data import ProcessData
 from core.csv_handler import CsvHandler
 
 class MainWindow(QMainWindow):
-    def __init__(self, config, network_reader):
+    def __init__(self, config, network_reader, gpio_reader):
         super().__init__()
-        self.connect_gui_to_backend(config, network_reader)
+        self.connect_gui_to_backend(config, network_reader, gpio_reader)
         self.declare_variables()
         self.initalizeUI()
         self.define_separators()
         self.setup_status_bar()
         self.serial.start_reading()
 
-    def connect_gui_to_backend(self, config, network_reader):
+    def connect_gui_to_backend(self, config, network_reader, gpio_reader):
         self.logger = logging.getLogger('HORUS_CSS.main_window')
         self.logger.info("Inicjalizacja głównego okna")
 
@@ -52,6 +52,8 @@ class MainWindow(QMainWindow):
         self.network_reader.subcribe_on_connection(self.on_partner_connected)
         self.network_reader.subcribe_on_disconnect(self.on_partner_disconnected)
         self.network_reader.subcribe_on_data_received(self.processor.on_ethernet_data_received)
+
+        self.gpio_reader = gpio_reader
 
         self.default_timespan = 30
 

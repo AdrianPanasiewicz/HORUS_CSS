@@ -66,6 +66,18 @@ class NetworkReader:
 		finally:
 			self.conn.close()
 
+	def send(self, data: dict):
+		if not self.conn:
+			self.logger.error("No active connection to send data.")
+			return
+		try:
+			message = json.dumps(data).encode('utf-8')
+			self.conn.sendall(message)
+			self.logger.debug(f"Sent: {data}")
+		except (BrokenPipeError, ConnectionResetError, OSError) as e:
+			self.logger.error(f"Error sending data: {e}")
+			self.conn = None
+
 	def heartbeat_check(self):
 		while self.conn:
 			try:
