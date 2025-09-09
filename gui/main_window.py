@@ -13,6 +13,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QFrame, QTextBrowser, QDialogButtonBox,
                              QSizePolicy, QGroupBox, QMessageBox,
                              QInputDialog, QDialog)
+from gpiozero.pins.mock import MockFactory
 
 from gui.mission_status_widget import MissionStatusWidget
 from gui.time_series_plot import TimeSeriesPlot
@@ -54,6 +55,7 @@ class MainWindow(QMainWindow):
         self.network_reader.subcribe_on_data_received(self.processor.on_ethernet_data_received)
 
         self.gpio_reader = gpio_reader
+        self.gpio_reader.subscribe_when_held(self.abort_mission_pressed)
 
         self.default_timespan = 30
 
@@ -72,6 +74,7 @@ class MainWindow(QMainWindow):
         self.recovery_detection = False
         self.landing_detection = False
         self.engine_detection = False
+        self.mission_aborted = False
 
         # Debug variables - to be removed
         self.current_status_index = 1
@@ -186,7 +189,7 @@ class MainWindow(QMainWindow):
         self.data_markers_action = self.view_menu.addAction("Data Markers")
         self.data_markers_action.setCheckable(True)
         self.data_markers_action.setChecked(True)
-        self.data_markers_action.triggered.connect(self.toggle_data_markers)
+        self.data_markers_action.triggered.connect(self.update_data_markers)
 
         self.grid_action = self.view_menu.addAction("Grid")
         self.grid_action.setCheckable(True)
@@ -213,6 +216,13 @@ class MainWindow(QMainWindow):
         self.test_menu.addSeparator()
         self.test_menu.addAction("Start Status Image Cycling", self.start_status_cycling)
         self.test_menu.addAction("Stop Status Image Cycling", self.stop_status_cycling)
+
+        self.test_menu.addSeparator()
+
+        self.abort_button_sim = self.test_menu.addAction("Simulate Abort Switch Toggle")
+        self.abort_button_sim.setCheckable(True)
+        self.abort_button_sim.setChecked(False)
+        self.abort_button_sim.triggered.connect(self.simulate_button_held)
 
         self.themes = {
             "Dark Blue": "dark_blue.qss",
@@ -285,6 +295,8 @@ class MainWindow(QMainWindow):
         self.left_layout.addWidget(self.rocket_trajectory_label)
 
         self.mission_status = MissionStatusWidget()
+        self.mission_status.setMinimumHeight(150)
+        self.mission_status.setMinimumWidth(600)
         self.left_layout.addWidget(self.mission_status)
 
         # pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
@@ -658,6 +670,48 @@ class MainWindow(QMainWindow):
         self.terminal_output.append(
             f">{current_time}: <span style='color: yellow;'>Plot simulation speed set to {self.plot_sim_interval}ms</span>")
 
+    def abort_mission_pressed(self):
+        current_time = datetime.now().strftime("%H:%M:%S")
+
+        self.terminal_output.append(
+            f">{current_time}: <span style='color: red;'>Abort mission button pressed!</span>")
+        self.global_status_label.setText(f"<span style='color: red;'>Mission aborted</span>")
+
+        # self.mission_status.set_progress(100) #TODO fix this
+        self.mission_status.progress_bar.setStyleSheet("""
+            QProgressBar {
+                border: 2px solid #2c3e50;
+                border-radius: 5px;
+                text-align: center;
+                background-color: #ecf0f1;
+            }
+            QProgressBar::chunk {
+                background-color: red;
+                border-radius: 3px;
+            }
+        """)
+        self.logger.info(f"Abort mission button pressed.")
+
+        self.mission_aborted = True
+
+    def simulate_button_held(self):
+        try:
+            pin_factory = type(self.gpio_reader.button.pin.factory)
+            if pin_factory is not MockFactory:
+                self.logger.warning("Cannot simulate button press: real GPIO backend in use.")
+                return
+
+            pin = self.gpio_reader.button.pin
+
+            if pin.state:
+                pin.drive_low()  # press
+                self.logger.info("Simulated button press (drive_low).")
+            else:
+                pin.drive_high()
+                self.logger.info("Simulated button release (drive_high).")
+
+        except Exception as e:
+            self.logger.error(f"Failed to simulate button press: {e}")
 
     def generate_plot_data(self):
         current_time = datetime.now()
@@ -736,7 +790,7 @@ class MainWindow(QMainWindow):
             self.logger.error(f"Error exporting plots: {str(e)}")
             QMessageBox.critical(self, "Export Error", f"Failed to export plots: {str(e)}")
 
-    def toggle_data_markers(self):
+    def update_data_markers(self):
         state = self.data_markers_action.isChecked()
         for plot in [self.temp_plot, self.press_plot, self.lora_snr_plot]:
             plot.toggle_data_markers(state)
@@ -1020,12 +1074,13 @@ class MainWindow(QMainWindow):
 
         self.status_packet_label.setText(f"Last received packet: {message_timestamp} s")
 
-        if self.current_data['progress'] != -1:
-            self.mission_status.progress_bar.setValue(self.current_data['progress'])
-        else:
-            self.mission_status.progress_bar.setValue(0)
-            self.terminal_output.append(
-                f">{current_time}: <span style='color: red;'>Received invalid status from LOTUS ONE. Received packet: {self.current_data['status']}</span>")
+        if not self.mission_aborted:
+            if self.current_data['progress'] != -1:
+                self.mission_status.set_progress(self.current_data['progress'])
+            else:
+                self.mission_status.set_progress(0)
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: red;'>Received invalid status from LOTUS ONE. Received packet: {self.current_data['status']}</span>")
 
     def on_partner_connected(self):
         current_time = datetime.now().strftime("%H:%M:%S")
