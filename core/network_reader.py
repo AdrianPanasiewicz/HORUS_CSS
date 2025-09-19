@@ -80,7 +80,7 @@ class NetworkReader:
 			self.logger.error("No active connection to send data.")
 			return
 		try:
-			message = json.dumps(data).encode('utf-8')
+			message = json.dumps(data).encode('utf-8') + b"\n"
 			self.conn.sendall(message)
 			self.logger.debug(f"Sent: {data}")
 		except (BrokenPipeError, ConnectionResetError, OSError) as e:

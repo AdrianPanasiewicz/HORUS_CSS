@@ -56,7 +56,7 @@ def main():
 
     gpio_reader = GpioReader(Config.DEFAULT_GPIO_PIN)
     logger.debug("GpioReader initialized on pin %s", Config.DEFAULT_GPIO_PIN)
-    # gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
+    gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
     logger.debug("Subscribed GPIO event to send mission_abort_pressed event")
 
     window = MainWindow(config, network_reader, gpio_reader)
