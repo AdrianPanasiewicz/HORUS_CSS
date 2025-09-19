@@ -10,6 +10,7 @@ class NetworkReader:
 		self.HOST = host
 		self.PORT = port
 		self.conn = None
+		self.stop_requested = False
 		self.logger = logging.getLogger(
 			'HORUS_CSS.network_reader')
 		self.on_connection_subscibers = []
@@ -17,9 +18,10 @@ class NetworkReader:
 		self.on_data_received_subscibers = []
 
 	def connect_to_server(self):
-		while not self.conn:
+		while not self.conn and not self.stop_requested:
 			try:
 				with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+					s.settimeout(1.0)
 
 					s.bind((self.HOST, self.PORT))
 					s.listen()
@@ -79,7 +81,7 @@ class NetworkReader:
 			self.conn = None
 
 	def heartbeat_check(self):
-		while self.conn:
+		while self.conn and not self.stop_requested:
 			try:
 				self.conn.send(b'')
 				sleep(0.5)
@@ -103,3 +105,10 @@ class NetworkReader:
 	def subcribe_on_data_received(self, callback):
 		self.on_data_received_subscibers.append(callback)
 		self.logger.info(f"Added {callback} as a subscriber to on_data_received_subscibers.")
+
+	def stop(self):
+		self.logger.info("Stop requested for NetworkReader")
+		self.stop_requested = True
+		if self.conn:
+			self.conn.close()
+			self.conn = None

@@ -2,6 +2,8 @@ import logging
 import os
 import platform
 import subprocess
+import threading
+
 import numpy as np
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import Qt

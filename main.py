@@ -19,7 +19,7 @@ def main():
     logging.basicConfig(
         filename=log_file,
         filemode='a',
-        level=logging.INFO,
+        level=logging.DEBUG,
         format='%(asctime)s %(levelname)-8s %(name)s - %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
@@ -72,7 +72,11 @@ def main():
     exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
 
+    network_reader.stop()
     network_thread.join(timeout=1)
+
+    active_threads = threading.enumerate()
+    logger.warning("Still active threads after join: %s", [t.name for t in active_threads])
 
     sys.exit(exit_code)
 
@@ -84,9 +88,6 @@ if __name__ == "__main__":
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     elif operational_system == 'Darwin':
         os.environ["QT_QPA_PLATFORM"] = "cocoa"
-
-    startup_logger = logging.getLogger('HORUS_CSS_logger')
-    startup_logger.debug("Detected OS: %s, QT_QPA_PLATFORM set to %s", operational_system, os.environ.get("QT_QPA_PLATFORM"))
 
     try:
         main()
