@@ -13,7 +13,6 @@ from core.gpio_reader import GpioReader
 import os
 
 def main():
-
     session_dir = Utils.create_session_directory()
     log_file = os.path.join(session_dir, 'app_events.log')
 
@@ -30,30 +29,51 @@ def main():
     logger.info("Uruchamianie aplikacji")
 
     app = QApplication(sys.argv)
+    logger.debug("QApplication instance created")
 
-    config_dialog = SerialConfigDialog()
+    config_dialog = SerialConfigDialog(default_ip_address=Config.DEFAULT_IP_ADDRESS)
+    logger.debug("SerialConfigDialog initialized with default IP: %s", Config.DEFAULT_IP_ADDRESS)
+
     if config_dialog.exec() == QDialog.DialogCode.Accepted:
         config = config_dialog.get_settings()
         logger.info(f"Konfiguracja portu załadowana: {config}")
     else:
-        config = {'port': "", 'baudrate': Config.DEFAULT_BAUD_RATE, 'lora_config': None, 'is_config_selected': True,
-        "network": {'ip_address': Config.DEFAULT_IP_ADDRESS, "port": Config.DEFAULT_IP_PORT}}
-        logger.info("Użytkownik zrezygnował z portu – używam domyślnych ustawień")
+        config = {
+            'port': "",
+            'baudrate': Config.DEFAULT_BAUD_RATE,
+            'lora_config': None,
+            'is_config_selected': True,
+            'network': {
+                'ip_address': Config.DEFAULT_IP_ADDRESS,
+                'port': Config.DEFAULT_IP_PORT
+            }
+        }
+        logger.warning("Użytkownik zrezygnował z portu – używam domyślnych ustawień: %s", config)
 
     network_config = config['network']
+    logger.debug("Initializing NetworkReader with IP %s and port %s", network_config['ip_address'], network_config['port'])
     network_reader = NetworkReader(host=network_config['ip_address'], port=int(network_config['port']))
 
     gpio_reader = GpioReader(Config.DEFAULT_GPIO_PIN)
+    logger.debug("GpioReader initialized on pin %s", Config.DEFAULT_GPIO_PIN)
     gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
+    logger.debug("Subscribed GPIO event to send mission_abort_pressed event")
 
     window = MainWindow(config, network_reader, gpio_reader)
-    network_thread = threading.Thread(target=network_reader.connect_to_server, daemon=True)
+    logger.debug("MainWindow created with given configuration")
+
+    network_thread = threading.Thread(target=network_reader.connect_to_server, daemon=False)
     network_thread.start()
+    logger.info("Network thread started")
 
     window.show()
+    logger.debug("Main window shown")
 
     exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
+
+    network_thread.join(timeout=2)
+
     sys.exit(exit_code)
 
 if __name__ == "__main__":
@@ -64,9 +84,14 @@ if __name__ == "__main__":
         os.environ["QT_QPA_PLATFORM"] = "xcb"
     elif operational_system == 'Darwin':
         os.environ["QT_QPA_PLATFORM"] = "cocoa"
+
+    logging.basicConfig(level=logging.DEBUG)
+    startup_logger = logging.getLogger('HORUS_CSS_logger')
+    startup_logger.debug("Detected OS: %s, QT_QPA_PLATFORM set to %s", operational_system, os.environ.get("QT_QPA_PLATFORM"))
+
     try:
         main()
     except Exception as e:
         logger = logging.getLogger('HORUS_CSS_logger')
-        logger.error(f"An exception has occurred: {e}")
+        logger.exception("An exception has occurred")
         print("An exception has occurred: ", e)
