@@ -18,27 +18,34 @@ class NetworkReader:
 		self.on_data_received_subscibers = []
 
 	def connect_to_server(self):
-		while not self.conn and not self.stop_requested:
+		server_socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+		server_socket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+		server_socket.bind((self.HOST, self.PORT))
+		server_socket.listen()
+		server_socket.settimeout(1.0)
+
+		self.logger.info(f"Server listening on {self.HOST}:{self.PORT}")
+
+		while not self.stop_requested:
 			try:
-				with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
-					s.settimeout(1.0)
+				self.conn, self.addr = server_socket.accept()
+				self.logger.info(f"Connected with {self.addr}")
 
-					s.bind((self.HOST, self.PORT))
-					s.listen()
-					self.logger.debug(f"Serwer nasłuchuje na {self.HOST}:{self.PORT}")
+				for callback in self.on_connection_subscibers:
+					callback()
 
-					self.conn, self.addr = s.accept()
-					self.logger.debug(f"Połączono z {self.addr}")
+				threading.Thread(target=self.heartbeat_check, daemon=True).start()
+				self.read_data()
 
-					for on_connection in self.on_connection_subscibers:
-						on_connection()
+			except socket.timeout:
+				continue
+			except OSError as e:
+				if not self.stop_requested:
+					self.logger.error("Socket error in accept(): %s", e)
+				sleep(1)
 
-					threading.Thread(target=self.heartbeat_check).start()
-					self.read_data()
-
-			except (ConnectionRefusedError, socket.timeout, OSError) as e:
-				self.logger.error(f"Błąd łączenia z serwerem: {e}")
-				sleep(2)
+		server_socket.close()
+		self.logger.info("NetworkReader stopped")
 
 	def read_data(self):
 		try:
