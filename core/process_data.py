@@ -61,7 +61,7 @@ class ProcessData(QObject):
             self.logger.exception(
                 f"Błąd podczas łączenia danych telemetrycznych i transmisyjnych: {e}")
 
-    def count_leading_ones(status, bit_length=6):
+    def count_leading_ones(self, status, bit_length=6):
         mask = (1 << bit_length) - 1
         status &= mask
         found_zero = False

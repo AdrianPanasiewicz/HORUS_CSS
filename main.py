@@ -56,7 +56,7 @@ def main():
 
     gpio_reader = GpioReader(Config.DEFAULT_GPIO_PIN)
     logger.debug("GpioReader initialized on pin %s", Config.DEFAULT_GPIO_PIN)
-    gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
+    # gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
     logger.debug("Subscribed GPIO event to send mission_abort_pressed event")
 
     window = MainWindow(config, network_reader, gpio_reader)
@@ -72,7 +72,7 @@ def main():
     exit_code = app.exec()
     logger.info(f"Aplikacja zakończona z kodem {exit_code}")
 
-    network_thread.join(timeout=2)
+    network_thread.join(timeout=1)
 
     sys.exit(exit_code)
 
@@ -85,7 +85,6 @@ if __name__ == "__main__":
     elif operational_system == 'Darwin':
         os.environ["QT_QPA_PLATFORM"] = "cocoa"
 
-    logging.basicConfig(level=logging.DEBUG)
     startup_logger = logging.getLogger('HORUS_CSS_logger')
     startup_logger.debug("Detected OS: %s, QT_QPA_PLATFORM set to %s", operational_system, os.environ.get("QT_QPA_PLATFORM"))
 
