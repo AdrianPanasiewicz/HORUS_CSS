@@ -5,6 +5,7 @@ import subprocess
 import threading
 
 import numpy as np
+from PyQt5.QtWidgets import QSlider
 from PyQt6.QtCore import QTimer
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
@@ -17,7 +18,6 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QInputDialog, QDialog)
 from gpiozero.pins.mock import MockFactory
 
-from gui.mission_status_widget import MissionStatusWidget
 from gui.time_series_plot import TimeSeriesPlot
 from datetime import datetime, timedelta
 from serial.tools import list_ports
@@ -298,11 +298,6 @@ class MainWindow(QMainWindow):
         self.rocket_trajectory_label.setScaledContents(False)
         self.left_layout.addWidget(self.rocket_trajectory_label)
 
-        # self.mission_status = MissionStatusWidget()
-        # self.mission_status.setMinimumHeight(150)
-        # self.mission_status.setMinimumWidth(600)
-        # self.left_layout.addWidget(self.mission_status)
-
         pixmap = QPixmap(r"gui/resources/status_images/" + self.current_status_image)
         width = 800
         scaled_pixmap = pixmap.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
@@ -313,7 +308,7 @@ class MainWindow(QMainWindow):
         self.terminal_output.append(
             f">{current_time}: System ready...")
         self.terminal_output.setStyleSheet(
-            "font-size: 14px;")
+            "font-size: 14px; background-color: #09131c;")
         self.left_layout.addWidget(self.terminal_output)
 
 
