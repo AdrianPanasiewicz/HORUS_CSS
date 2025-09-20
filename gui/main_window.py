@@ -78,6 +78,8 @@ class MainWindow(QMainWindow):
         self.engine_detection = False
         self.mission_aborted = False
 
+        self.current_status_image = "0-0-0-0-0.png"
+
         # Debug variables - to be removed
         self.current_status_index = 1
         self.status_cycle_timer = QTimer()
@@ -293,18 +295,18 @@ class MainWindow(QMainWindow):
         self.left_layout.addLayout(status_wrapper)
 
         self.rocket_trajectory_label = QLabel()
-        self.rocket_trajectory_label.setScaledContents(True)
+        self.rocket_trajectory_label.setScaledContents(False)
         self.left_layout.addWidget(self.rocket_trajectory_label)
 
-        self.mission_status = MissionStatusWidget()
-        self.mission_status.setMinimumHeight(150)
-        self.mission_status.setMinimumWidth(600)
-        self.left_layout.addWidget(self.mission_status)
+        # self.mission_status = MissionStatusWidget()
+        # self.mission_status.setMinimumHeight(150)
+        # self.mission_status.setMinimumWidth(600)
+        # self.left_layout.addWidget(self.mission_status)
 
-        # pixmap = QPixmap(r"gui/resources/status_images/status-1.png")
-        # scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
-        #                               Qt.TransformationMode.SmoothTransformation)
-        # self.rocket_trajectory_label.setPixmap(scaled_pixmap)
+        pixmap = QPixmap(r"gui/resources/status_images/" + self.current_status_image)
+        width = 800
+        scaled_pixmap = pixmap.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
+        self.rocket_trajectory_label.setPixmap(scaled_pixmap)
 
         self.terminal_output = QTextBrowser()
         current_time = datetime.now().strftime("%H:%M:%S")
@@ -1011,7 +1013,9 @@ class MainWindow(QMainWindow):
         """Stop cycling through status images"""
         if hasattr(self, 'status_cycle_timer') and self.status_cycle_timer.isActive():
             self.status_cycle_timer.stop()
+            self.status_cycle_timer.killTimer()
             self.status_cycling_active = False
+            self.current_status_index = 0
 
             current_time = datetime.now().strftime("%H:%M:%S")
             self.terminal_output.append(
@@ -1019,22 +1023,31 @@ class MainWindow(QMainWindow):
             self.logger.info("Stopped status image cycling")
 
     def cycle_status_image(self):
-        """Cycle to the next status image"""
-        self.current_status_index = (self.current_status_index % 6) + 1
+        """Cycle to the next status image dynamically"""
+        image_folder = "gui/resources/status_images"
+        if not hasattr(self, 'status_images'):
+            self.status_images = sorted([
+                f for f in os.listdir(image_folder)
+                if f.lower().endswith('.png')
+            ])
+            self.current_status_index = 0
+
+        self.current_status_index = (self.current_status_index + 1) % len(self.status_images)
+        self.current_status_image = self.status_images[self.current_status_index]
 
         try:
-            pixmap = QPixmap(f"gui/resources/status_images/status-{self.current_status_index}.png")
+            pixmap = QPixmap(os.path.join(image_folder, self.current_status_image))
             if not pixmap.isNull():
-                scaled_pixmap = pixmap.scaled(500, 650, Qt.AspectRatioMode.KeepAspectRatio,
-                                              Qt.TransformationMode.SmoothTransformation)
-                # Assuming rocket_trajectory_label is accessible - you might need to make it a class variable
+                width = 800
+                scaled_pixmap = pixmap.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
                 self.rocket_trajectory_label.setPixmap(scaled_pixmap)
 
                 current_time = datetime.now().strftime("%H:%M:%S")
                 self.terminal_output.append(
-                    f">{current_time}: <span style='color: cyan;'>Status image changed to status-{self.current_status_index}.png</span>")
+                    f">{current_time}: <span style='color: cyan;'>Status image changed to {self.current_status_image}</span>"
+                )
             else:
-                self.logger.warning(f"Could not load status-{self.current_status_index}.png")
+                self.logger.warning(f"Could not load {self.current_status_image}")
         except Exception as e:
             self.logger.error(f"Error loading status image: {str(e)}")
 
