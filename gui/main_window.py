@@ -78,7 +78,7 @@ class MainWindow(QMainWindow):
         self.engine_detection = False
         self.mission_aborted = False
 
-        self.current_status_image = "0-0-0-0-0.png"
+        self.current_status_image = "0.png"
 
         # Debug variables - to be removed
         self.current_status_index = 1
@@ -86,19 +86,17 @@ class MainWindow(QMainWindow):
         self.status_cycling_active = False
 
         self.current_data = {
-            'timestamp': 0.0,
-            'velocity': 0.0,
+            'ver_velocity': 0.0,
+            # 'ver_accel': 0.0,
             'altitude': 0.0,
             'pitch': 0.0,
             'roll': 0.0,
+            'yaw': 0.0,
             'status': 0,
             'latitude': 52.2549,
             'longitude': 20.9004,
-            'rssi': 0.0,
-            'snr': 0.0,
-            'bay_pressure': 0.0,
-            'bay_temperature': 0.0,
-            'progress': 0
+            'rbs': 0,
+            # 'snr': 0
         }
 
     def initalizeUI(self):
@@ -719,7 +717,6 @@ class MainWindow(QMainWindow):
         self.temp_plot.add_point(current_time, temp_value)
         self.temp_group.setTitle(f"Recovery Bay Temperature ({temp_value:.1f} °C)")
 
-
         snr_value = np.random.normal(5, 1.5)
         self.press_plot.add_point(current_time, snr_value)
         self.press_group.setTitle(f"Recovery Bay Pressure ({snr_value:.1f} hPa)")
@@ -1063,14 +1060,15 @@ class MainWindow(QMainWindow):
         """Aktualizacja danych na interfejsie"""
         current_time = datetime.now()
 
-        temp_value = self.current_data['bay_temperature']
-        self.temp_plot.add_point(current_time, temp_value)
-        self.temp_group.setTitle(f"Recovery Bay Temperature ({temp_value:.1f} °C)")
+        # temp_value = self.current_data['bay_temperature']
+        # self.temp_plot.add_point(current_time, temp_value)
+        # self.temp_group.setTitle(f"Recovery Bay Temperature ({temp_value:.1f} °C)")
+        #
+        # press_value = self.current_data['bay_pressure']
+        # self.press_plot.add_point(current_time, press_value)
+        # self.press_group.setTitle(f"Recovery Bay Pressure ({press_value:.1f} hPa)")
 
-        press_value = self.current_data['bay_pressure']
-        self.press_plot.add_point(current_time, press_value)
-        self.press_group.setTitle(f"Recovery Bay Pressure ({press_value:.1f} hPa)")
-
+        # Right now doesn't have LoRa data
         lora_snr_value = self.current_data['snr']
         self.lora_snr_plot.add_point(current_time, lora_snr_value)
         self.lora_group.setTitle(f"LoRa SNR Status ({lora_snr_value:.1f} dB)")
@@ -1081,6 +1079,25 @@ class MainWindow(QMainWindow):
         formatted_packet_time = packet_dt.strftime("%H:%M:%S.%f")[:-4]
         self.terminal_output.append(
             f">{message_timestamp}: Packet received from HORUS FAS. Packet timestamp: {formatted_packet_time}")
+
+        image = f"gui/resources/status_images/{self.current_data['status']}.png"
+        if not os.path.exists(image):
+            self.logger.warning(f"Status image not found: {image}")
+        try:
+            pixmap = QPixmap(image)
+            if not pixmap.isNull():
+                width = 800
+                scaled_pixmap = pixmap.scaledToWidth(width, Qt.TransformationMode.SmoothTransformation)
+                self.rocket_trajectory_label.setPixmap(scaled_pixmap)
+
+                current_time = datetime.now().strftime("%H:%M:%S")
+                self.terminal_output.append(
+                    f">{current_time}: <span style='color: cyan;'>Status image changed to {self.current_status_image}</span>"
+                )
+            else:
+                self.logger.warning(f"Could not load {image}")
+        except Exception as e:
+            self.logger.error(f"Error loading status image: {str(e)}")
 
         self.status_packet_label.setText(f"Last received packet: {message_timestamp} s")
 

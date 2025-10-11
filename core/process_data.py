@@ -17,23 +17,25 @@ class ProcessData(QObject):
         self.past = None
 
         self.current_data = {
-            'timestamp': 0.0,
-            'velocity': 0.0,
+            'ver_velocity': 0.0,
+            # 'ver_accel': 0.0,
             'altitude': 0.0,
             'pitch': 0.0,
             'roll': 0.0,
+            'yaw': 0.0,
             'status': 0,
             'latitude': 52.2549,
             'longitude': 20.9004,
-            'rssi': 0.0,
-            'snr': 0.0,
-            'bay_pressure': 0.0,
-            'bay_temperature': 0.0,
-            'progress': 0
+            'rbs': 0,
+            # 'snr': 0
         }
 
     def handle_telemetry(self, telemetry):
         self.current_telemetry = telemetry
+        self.process_and_emit()
+
+    def handle_auxiliary(self, auxiliary):
+        self.current_auxiliary = auxiliary  # This signal is not present in this GNS
         self.process_and_emit()
 
     def handle_transmission_info(self, transmission):
@@ -51,7 +53,7 @@ class ProcessData(QObject):
 
         self.logger.debug("Data packet processed")
 
-        self.process_status()
+        # self.process_status()
 
         try:
             self.logger.debug(
@@ -61,7 +63,7 @@ class ProcessData(QObject):
             self.logger.exception(
                 f"Błąd podczas łączenia danych telemetrycznych i transmisyjnych: {e}")
 
-    def count_leading_ones(self, status, bit_length=6):
+    def count_leading_ones(self, status, bit_length=6):     # Legacy code
         mask = (1 << bit_length) - 1
         status &= mask
         found_zero = False
@@ -75,7 +77,7 @@ class ProcessData(QObject):
                 found_zero = True
         return count
 
-    def process_status(self):
+    def process_status(self):       # Legacy code
         status = self.current_data['status']
         ones_count = self.count_leading_ones(status)
         if ones_count != -1:
