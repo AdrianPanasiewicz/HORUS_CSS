@@ -8,10 +8,11 @@ from PyQt6.QtCore import QObject, pyqtSignal
 class ProcessData(QObject):
     processed_data_ready = pyqtSignal(dict)
 
-    def __init__(self):
+    def __init__(self,  csv_handler):
         super().__init__()
         self.logger = logging.getLogger(
             'HORUS_CSS.data_processor')
+        self.csv_handler = csv_handler
         self.current_telemetry = None
         self.current_transmission = None
         self.past = None
@@ -94,6 +95,7 @@ class ProcessData(QObject):
                     f"Połączone dane do wysłania: {combined_data}")
                 self.processed_data_ready.emit(
                     combined_data)
+                self.csv_handler.write_row(combined_data)
             except Exception as e:
                 self.logger.exception(
                     f"Błąd podczas łączenia danych telemetrycznych i transmisyjnych: {e}")

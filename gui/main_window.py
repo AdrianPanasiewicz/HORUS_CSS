@@ -27,26 +27,26 @@ from core.process_data import ProcessData
 from core.csv_handler import CsvHandler
 
 class MainWindow(QMainWindow):
-    def __init__(self, config, network_reader, gpio_reader):
+    def __init__(self, config, network_reader, gpio_reader, csv_handler):
         super().__init__()
-        self.connect_gui_to_backend(config, network_reader, gpio_reader)
+        self.connect_gui_to_backend(config, network_reader, gpio_reader, csv_handler)
         self.declare_variables()
         self.initalizeUI()
         self.define_separators()
         self.setup_status_bar()
         self.serial.start_reading()
 
-    def connect_gui_to_backend(self, config, network_reader, gpio_reader):
+    def connect_gui_to_backend(self, config, network_reader, gpio_reader, csv_handler):
         self.logger = logging.getLogger('HORUS_CSS.main_window')
         self.logger.info("Inicjalizacja głównego okna")
 
-        self.csv_handler = CsvHandler()
+        self.csv_handler = csv_handler
         self.logger.info(
             f"CSV handler zainicjalizowany w sesji: {self.csv_handler.session_dir}")
 
         self.serial = SerialReader(config['port'], config['baudrate'])
         self.logger.info(f"SerialReader zainicjalizowany na porcie {config['port']} z baudrate {config['baudrate']}")
-        self.processor = ProcessData()
+        self.processor = ProcessData(self.csv_handler)
         self.logger.info(
             f"Singleton ProcessData zainicjalizowany")
 
@@ -1049,7 +1049,7 @@ class MainWindow(QMainWindow):
         self.current_data = data
         try:
             self.update_data()
-            self.csv_handler.write_row(data)
+            # self.csv_handler.write_row(data)
         except Exception as e:
             print("bład", e)
             self.logger.exception(

@@ -4,6 +4,8 @@ import platform
 import threading
 from functools import partial
 from PyQt6.QtWidgets import QApplication, QDialog
+
+from core.csv_handler import CsvHandler
 from gui.main_window import MainWindow
 from core.serial_config import SerialConfigDialog
 from core.network_reader import NetworkReader
@@ -59,7 +61,8 @@ def main():
     gpio_reader.subscribe_when_held(partial(network_reader.send, {"event": "mission_abort_pressed"}))
     logger.debug("Subscribed GPIO event to send mission_abort_pressed event")
 
-    window = MainWindow(config, network_reader, gpio_reader)
+    csv_handler = CsvHandler()
+    window = MainWindow(config, network_reader, gpio_reader, csv_handler)
     logger.debug("MainWindow created with given configuration")
 
     network_thread = threading.Thread(target=network_reader.connect_to_server, daemon=False)
