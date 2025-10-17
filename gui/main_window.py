@@ -18,7 +18,7 @@ from PyQt6.QtWidgets import (QMainWindow, QTextEdit,
                              QInputDialog, QDialog)
 from gpiozero.pins.mock import MockFactory
 
-from gui.time_series_plot import TimeSeriesPlot
+from gui.live_plot import LivePlot
 from datetime import datetime, timedelta
 from serial.tools import list_ports
 from PyQt6.QtGui import QIcon, QPixmap, QColor, QFont
@@ -318,7 +318,7 @@ class MainWindow(QMainWindow):
         self.temp_group = QGroupBox("Recovery Bay Temperature (0 °C)")
         temp_layout = QVBoxLayout()
 
-        self.temp_plot = TimeSeriesPlot(self.default_timespan, line_color='#e74c3c')
+        self.temp_plot = LivePlot(self.default_timespan, line_color='#e74c3c')
         self.temp_plot.set_x_label("Time [s]")
         self.temp_plot.set_y_label("Temp [°C]")
         temp_layout.addWidget(self.temp_plot, stretch=1)
@@ -330,7 +330,7 @@ class MainWindow(QMainWindow):
         self.press_group = QGroupBox("Recovery Bay Pressure (0 hPa)")
         press_layout = QVBoxLayout()
 
-        self.press_plot = TimeSeriesPlot(self.default_timespan, line_color='#27ae60')
+        self.press_plot = LivePlot(self.default_timespan, line_color='#27ae60')
         self.press_plot.set_x_label("Time [s]")
         self.press_plot.set_y_label("Pressure [hPa]")
         press_layout.addWidget(self.press_plot, stretch=1)
@@ -342,7 +342,7 @@ class MainWindow(QMainWindow):
         self.lora_group = QGroupBox("LoRa SNR Status (0 dB)")
         lora_layout = QVBoxLayout()
 
-        self.lora_snr_plot = TimeSeriesPlot(self.default_timespan, line_color='#2980b9')
+        self.lora_snr_plot = LivePlot(self.default_timespan, line_color='#2980b9')
         self.lora_snr_plot.set_x_label("Time [s]")
         self.lora_snr_plot.set_y_label("SNR [dB]")
         lora_layout.addWidget(self.lora_snr_plot, stretch=1)

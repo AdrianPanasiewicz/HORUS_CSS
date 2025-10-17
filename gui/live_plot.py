@@ -7,7 +7,7 @@ from datetime import datetime
 from pyqtgraph.exporters import ImageExporter, SVGExporter
 
 
-class TimeSeriesPlot(QWidget):
+class LivePlot(QWidget):
 	def __init__(self, timespan, parent=None, line_color='#1f77b4'):
 		super().__init__(parent)
 
