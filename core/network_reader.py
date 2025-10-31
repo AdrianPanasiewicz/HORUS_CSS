@@ -6,7 +6,7 @@ from time import sleep
 
 class NetworkReader:
 
-	def __init__(self, host = "192.168.236.1", port = 65432):
+	def __init__(self, host = "0.0.0.0", port = 65432):
 		self.HOST = host
 		self.PORT = port
 		self.conn = None
