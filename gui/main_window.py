@@ -1069,9 +1069,9 @@ class MainWindow(QMainWindow):
         # self.press_group.setTitle(f"Recovery Bay Pressure ({press_value:.1f} hPa)")
 
         # Right now doesn't have LoRa data
-        lora_snr_value = self.current_data['snr']
-        self.lora_snr_plot.add_point(current_time, lora_snr_value)
-        self.lora_group.setTitle(f"LoRa SNR Status ({lora_snr_value:.1f} dB)")
+        # lora_snr_value = self.current_data['snr']
+        # self.lora_snr_plot.add_point(current_time, lora_snr_value)
+        # self.lora_group.setTitle(f"LoRa SNR Status ({lora_snr_value:.1f} dB)")
 
         message_timestamp = datetime.now().strftime("%H:%M:%S")
         packet_timestamp_str = self.current_data['timestamp']
@@ -1092,7 +1092,7 @@ class MainWindow(QMainWindow):
 
                 current_time = datetime.now().strftime("%H:%M:%S")
                 self.terminal_output.append(
-                    f">{current_time}: <span style='color: cyan;'>Status image changed to {self.current_status_image}</span>"
+                    f">{current_time}: <span style='color: cyan;'>Status image changed to {self.current_data['status']}.png</span>"
                 )
             else:
                 self.logger.warning(f"Could not load {image}")
@@ -1101,13 +1101,13 @@ class MainWindow(QMainWindow):
 
         self.status_packet_label.setText(f"Last received packet: {message_timestamp} s")
 
-        if not self.mission_aborted:
-            # if self.current_data['progress'] != -1:
-            #     # self.mission_status.set_progress(self.current_data['progress'])
-            # else:
-                # self.mission_status.set_progress(0)
-            self.terminal_output.append(
-                f">{current_time}: <span style='color: red;'>Received invalid status from LOTUS ONE. Received packet: {self.current_data['status']}</span>")
+        # if not self.mission_aborted:
+        #     # if self.current_data['progress'] != -1:
+        #     #     # self.mission_status.set_progress(self.current_data['progress'])
+        #     # else:
+        #         # self.mission_status.set_progress(0)
+        #     self.terminal_output.append(
+        #         f">{current_time}: <span style='color: red;'>Received invalid status from LOTUS ONE. Received packet: {self.current_data['status']}</span>")
 
     def on_partner_connected(self):
         current_time = datetime.now().strftime("%H:%M:%S")

@@ -8,7 +8,7 @@ from PyQt6.QtWidgets import QApplication, QDialog
 from core.csv_handler import CsvHandler
 from gui.main_window import MainWindow
 from core.serial_config import SerialConfigDialog
-from core.network_reader import NetworkReader
+from core.network_reader import NetworkTransmitter
 from core.utils import Utils
 from core.config import Config
 from core.gpio_reader import GpioReader
@@ -53,8 +53,8 @@ def main():
         logger.warning("Użytkownik zrezygnował z portu – używam domyślnych ustawień: %s", config)
 
     network_config = config['network']
-    logger.debug("Initializing NetworkReader with IP %s and port %s", network_config['ip_address'], network_config['port'])
-    network_reader = NetworkReader(host=network_config['ip_address'], port=int(network_config['port']))
+    logger.debug("Initializing NetworkTransmitter with IP %s and port %s", network_config['ip_address'], network_config['port'])
+    network_reader = NetworkTransmitter(host=network_config['ip_address'], port=int(network_config['port']))
 
     gpio_reader = GpioReader(Config.DEFAULT_GPIO_PIN)
     logger.debug("GpioReader initialized on pin %s", Config.DEFAULT_GPIO_PIN)

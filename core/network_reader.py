@@ -4,7 +4,7 @@ import logging
 import threading
 from time import sleep
 
-class NetworkReader:
+class NetworkTransmitter:
 
 	def __init__(self, host = "192.168.236.1", port = 65432):
 		self.HOST = host
@@ -45,7 +45,7 @@ class NetworkReader:
 				sleep(1)
 
 		server_socket.close()
-		self.logger.info("NetworkReader stopped")
+		self.logger.info("NetworkTransmitter stopped")
 
 	def read_data(self):
 		try:
@@ -114,7 +114,7 @@ class NetworkReader:
 		self.logger.info(f"Added {callback} as a subscriber to on_data_received_subscibers.")
 
 	def stop(self):
-		self.logger.info("Stop requested for NetworkReader")
+		self.logger.info("Stop requested for NetworkTransmitter")
 		self.stop_requested = True
 		if self.conn:
 			self.conn.close()
