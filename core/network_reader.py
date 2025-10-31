@@ -45,7 +45,7 @@ class NetworkTransmitter:
 				sleep(1)
 
 		server_socket.close()
-		self.logger.info("NetworkTransmitter stopped")
+		self.logger.info("NetworkReader stopped")
 
 	def read_data(self):
 		try:
@@ -114,7 +114,7 @@ class NetworkTransmitter:
 		self.logger.info(f"Added {callback} as a subscriber to on_data_received_subscibers.")
 
 	def stop(self):
-		self.logger.info("Stop requested for NetworkTransmitter")
+		self.logger.info("Stop requested for NetworkReader")
 		self.stop_requested = True
 		if self.conn:
 			self.conn.close()
